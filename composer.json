@@ -1,0 +1,21 @@
+{
+    "name": "lubaogui/yii2-account",
+    "description": "yii2账户体系，主要牵扯到账户金额交易，包含账户之间的转账和支付等",
+    "type": "yii2-extension",
+    "keywords": ["yii2","extension"],
+    "license": "LGPL-3.0+",
+    "authors": [
+        {
+            "name": "Baogui Lu",
+            "email": "lbaogui@pku.edu.cn"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "lubaogui\\account\\": ""
+        }
+    }
+}
