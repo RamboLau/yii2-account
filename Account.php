@@ -3,7 +3,7 @@
 namespace lubaogui\account;
 
 /**
- * This is just an example.
+ * 该类属于对账户所有对外接口操作的一个封装，账户的功能有充值，提现，担保交易，直付款交易等
  */
 class Account extends Component 
 {

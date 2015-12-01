@@ -24,6 +24,19 @@ use yii\behaviors\TimestampBehavior;
 
 class Trans extends ActiveRecord 
 {
+    //交易的几种状态，需要和数据库保持一致
+    const TRANS_STATUS_WAITPAY = 0;
+    const TRANS_STATUS_PAYSUCCEEDED = 1;
+    const TRANS_STATUS_SUCCEEDED = 2;
+    const TRANS_STATUS_REFUNDING = 3;
+    const TRANS_STATUS_REFUNDED = 4;
+
+    //结算的几种状态,目前仅支持实时结算
+    const TRANS_SETTLE_TYPE_IMMEDIATE = 1;
+
+    //支付的两种方法，这两种方法仅仅对于网站账户之间的交易有限，对充值和支付不适用
+    const TRANS_PAY_MODE_VOUCH = 1;
+    const TRANS_PAY_MODE_DIRECTPAY = 2;
 
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义
