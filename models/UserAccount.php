@@ -25,6 +25,11 @@ use yii\behaviors\TimestampBehavior;
 class UserAccount extends ActiveRecord 
 {
 
+    //账户类型,三种，普通账户，公司账户，银行账户
+    const ACCOUNT_TYPE_NORMAL = 1;
+    const ACCOUNT_TYPE_COMPANY = 2;
+    const ACCOUNT_TYPE_BANK = 3;
+
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义
      *
@@ -52,6 +57,36 @@ class UserAccount extends ActiveRecord
         ];
     }
 
+    /**
+     * @brief 
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/01 16:26:45
+    **/
+    public function income($money) {
+
+        $this->balance += $money;
+        if ($this->save()) {
+            return true;
+        }    
+        else {
+            return false;
+        }
+
+    }
+
+    public function consume($money, $vouche) {
+
+    }
+
+    public function freezeMoney($money, $reason) {
+
+    }
 }
+
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */

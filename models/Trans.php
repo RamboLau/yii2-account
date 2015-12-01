@@ -49,7 +49,6 @@ class Trans extends ActiveRecord
         return '{{%trans}}';
     }
 
-
     /**
      * @brief 自动设置 created_at和updated_at
      *
