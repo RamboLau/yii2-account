@@ -41,7 +41,22 @@ class Account extends Component
     }
 
     /**
-     * @brief 退款操作
+     * @brief 担保交易支付
+     *
+     * @return  public 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/03 06:53:03
+    **/
+    public vouchPayForTrans($trans) {
+
+
+    }
+
+    /**
+     * @brief 退款操作,会根据交易的具体形态来判断退款形式
      *
      * @return  public function 
      * @retval   
@@ -51,6 +66,35 @@ class Account extends Component
      * @date 2015/11/30 10:32:54
     **/
     public function refundForTrans($trans) {
+
+    }
+
+    /**
+     * @brief 
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/03 09:17:23
+    **/
+    protected function refundDirectPay() {
+
+    }
+
+    /**
+     * @brief 
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/03 09:17:29
+    **/
+    protected function refundVouchPay() {
+
 
     }
 
