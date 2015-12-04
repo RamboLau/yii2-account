@@ -32,9 +32,12 @@ class Trans extends ActiveRecord
     const PAY_STATUS_WAITPAY = 1;
     const PAY_STATUS_SUCCEEDED = 2;
     const PAY_STATUS_FINISHED = 3;
-    const PAY_STATUS_REFUND_AUDITING = 4;
-    const PAY_STATUS_REFUNDING = 5;
-    const PAY_STATUS_REFUNDED = 6;
+    const PAY_STATUS_REFUNDED = 4;
+
+    //交易的类型，包含充值，提现和用户之间的交易（商家也属于用户中的一种），trans_type为单独一个表描述,初期可写死
+    const TRANS_TYPE_CHARGE = 1;
+    const TRANS_TYPE_WITHDRAW = 2;
+    const TRANS_TYPE_TRADE = 3;
 
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义

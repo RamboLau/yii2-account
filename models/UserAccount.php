@@ -71,6 +71,10 @@ class UserAccount extends ActiveRecord
 
         $this->balance += $money;
         if ($this->save()) {
+            $bill = new Bill();
+            $bill->save();
+            $accountLog = new UserAccountLog();
+            $accountLog->save();
             return true;
         }    
         else {
@@ -91,9 +95,30 @@ class UserAccount extends ActiveRecord
     **/
     public function minus($money) {
 
+        $this->balance = $this->balance -  $money;
+        if ($this->save()) {
+            $bill = new Bill();
+            $bill->save();
+            $accountLog = new UserAccountLog();
+            $accountLog->save();
+            return true;
+        } 
+        else {
+            return false;
+        }
     }
 
-    public function freeze($money, $reason) {
+    /**
+     * @brief 
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/04 23:50:06
+    **/
+    public function freeze() {
 
     }
 
