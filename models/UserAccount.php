@@ -67,7 +67,7 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/01 16:26:45
     **/
-    public function income($money) {
+    public function plus($money) {
 
         $this->balance += $money;
         if ($this->save()) {
@@ -79,14 +79,24 @@ class UserAccount extends ActiveRecord
 
     }
 
-    public function consume($money, $vouche) {
+    /**
+     * @brief 
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/04 22:57:20
+    **/
+    public function minus($money) {
 
     }
 
-    public function freezeMoney($money, $reason) {
+    public function freeze($money, $reason) {
 
     }
+
 }
-
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */

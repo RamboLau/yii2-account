@@ -25,7 +25,7 @@ use yii\behaviors\TimestampBehavior;
 class TransType extends ActiveRecord 
 {
 
-    const TRANS_ACCOUNT_TYPE_WEB_USER = 1;
+    const TRANS_ACCOUNT_TYPE_USER = 1;
     const TRANS_ACCOUNT_TYPE_THIRD = 2;
     const TRANS_ACCOUNT_TYPE_BANK = 3;
 
