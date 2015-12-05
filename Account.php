@@ -39,6 +39,11 @@ class Account extends Component
             return false;
         }
 
+        //分润账号处理逻辑
+
+
+        //手续费逻辑处理
+
         return true;
     }
 
@@ -189,35 +194,6 @@ class Account extends Component
     }
 
     /**
-     * @brief 
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/03 09:17:23
-    **/
-    protected function refundDirectPayTrans() {
-
-    }
-
-    /**
-     * @brief 
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/03 09:17:29
-    **/
-    protected function refundVouchPayTrans() {
-
-
-    }
-
-    /**
      * @brief 转账操作,转账操作属于直接支付给对方金额
      *
      * @return  public function 
@@ -228,6 +204,46 @@ class Account extends Component
      * @date 2015/11/30 10:32:54
     **/
     public function transferToAccount($trans) {
+
+    }
+
+    /**
+     * @brief 
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:03
+    **/
+    protected function profit($action, $money, $reason) {
+        $profitAccount = UserAccount::findOne($globalProfitAccountId);
+        switch $action {
+
+        case 'pay': {
+            $profitAccount->plus($money, $reason);
+            break;
+        }
+        case 'refund': {
+            $profitAccount->minus($money, $reason);
+            break;
+        }
+        default:break;
+        }
+    }
+
+    /**
+     * @brief 
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:52
+    **/
+    protected function fee($action, $money, $reason) {
 
     }
 
