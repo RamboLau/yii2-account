@@ -23,7 +23,6 @@ class Account extends Component
     public function directPayForTrans($trans) {
 
         $buyerAccount = UserAccount::findOne($trans->from_uid);
-
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
             throw new Exception('非普通账号不支持直接交易!请联系管理员');
         }
@@ -40,9 +39,10 @@ class Account extends Component
         }
 
         //分润账号处理逻辑
-
+        $this->profit('pay', $money, '账号利润');
 
         //手续费逻辑处理
+        $this->fee('pay', $fee, '支付手续费');
 
         return true;
     }
