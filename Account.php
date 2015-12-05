@@ -2,7 +2,6 @@
 
 namespace lubaogui\account;
 
-
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
 
@@ -67,10 +66,8 @@ class Account extends Component
             return false;
         }
 
-        //获取担保账号
+        //资金打入到担保账号
         $vouchAccount = UserAccount::findOne($vouchAccountId);
-
-        //担保账号增加收入
         if (!$vouchAccount->plus($money)) {
             return false;
         }
@@ -100,12 +97,19 @@ class Account extends Component
         //获取担保账号
         $vouchAccount = UserAccount::findOne($vouchAccountId);
 
-        //担保账号增加收入
+        //金额从担保账号转出
         if (!$vouchAccount->minus($money)) {
             return false;
         }
 
         //收款人获取收入
+        $sellerAccount = UserAccount::findOne($trans->to_uid);
+        if (!$sellerAccount->plus($trans->money)) {
+            return false;
+        }
+
+        //利润账号打入收益
+        $profitAccount = UserAccount::findOne($globalProfitAccountId);
         $sellerAccount = UserAccount::findOne($trans->to_uid);
         if (!$sellerAccount->plus($trans->money)) {
             return false;
@@ -145,7 +149,7 @@ class Account extends Component
             //获取担保账号
             $vouchAccount = UserAccount::findOne($vouchAccountId);
 
-            //担保账号增加收入
+            //担保账号将款项退给用户
             if (!$vouchAccount->minus($money)) {
                 return false;
             }
@@ -156,12 +160,23 @@ class Account extends Component
             //获取担保账号
             $sellerAccount = UserAccount::findOne($vouchAccountId);
 
-            //担保账号增加收入
+            //担保账号退款
             if (!$sellerAccount->minus($money)) {
                 return false;
             }
+
+            //利润账号退款
+
+
+            //手续费账号退款,手续费是否可以退款，需要由产品流程来判断
+
+
+            //分润账号退款
+
+
         }
 
+        //退款是否收取手续费,可以在这里做逻辑判断
         $buyerAccount = UserAccount::findOne($trans->from_uid); 
         if (!$buyerAccount->plus($trans->money)) {
             return false;
