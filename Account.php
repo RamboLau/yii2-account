@@ -3,6 +3,7 @@
 namespace lubaogui\account;
 
 use yii\helpers\ArrayHelper;
+use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
 
@@ -12,7 +13,7 @@ use lubaogui\account\models\Bill;
 class Account extends Component 
 {
 
-    
+    private $config;  
 
     /**
      * @brief 
@@ -25,10 +26,25 @@ class Account extends Component
      * @date 2015/12/06 10:12:27
     **/
     public function init() {
-        $config = yii\helpers\ArrayHelper::merge(
+        $this->config = yii\helpers\ArrayHelper::merge(
             require(__DIR__ . '/config/main.php'),
             require(__DIR__ . '/config/main-local.php')
         );
+    }
+
+    /**
+     * @brief 获取账户状态
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 17:59:27
+    **/
+    public function getBalance($uid) {
+        $userAccount = UserAccount::findOne($uid);
+        return  $userAccount->balance;
     }
 
     /**
@@ -41,31 +57,29 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/11/30 10:32:38
     **/
-    public function directPayForTrans($trans) {
+    public function directPay($transParams) {
+
+        $trans = new Trans();
+        $trans->load($transParams);
+        $trans->save();
 
         $buyerAccount = UserAccount::findOne($trans->from_uid);
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
-            throw new Exception('非普通账号不支持直接交易!请联系管理员');
+            //throw new Exception('非普通账号不支持直接交易!请联系管理员');
+            return false;
         }
 
-        //提交给账户进行扣款,账单，账户变化都进行更新
+        //提交给账户进行扣款,账单，账户变化都进行更新,对于买家，扣除total_money
         if (!$buyerAccount->minus($trans->total_money)) {
             return false;
         }
 
-        //收款账户处理逻辑
-        $sellerAccount = UserAccount::findOne($trans->to_uid);
-        if (!$sellerAccount->plus($money)) {
+        //完成交易的后续操作，如扣费等
+        if (!$this->finishPayTrans($trans)) {
             return false;
         }
 
-        //分润账号处理逻辑
-        $this->profit('pay', $money, '账号利润');
-
-        //手续费逻辑处理
-        $this->fee('pay', $fee, '支付手续费');
-
-        return true;
+        return $trans->id;
     }
 
 
@@ -79,10 +93,13 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/12/03 06:53:03
     **/
-    public vouchPayForTrans($trans) {
+    public vouchPay($transParams) {
+
+        $trans = new Trans();
+        $trans->load($transParams);
+        $trans->save();
 
         $buyerAccount = UserAccount::findOne($trans->from_uid);
-
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
             throw new Exception('非普通账号不支持直接交易!请联系管理员');
         }
@@ -102,7 +119,7 @@ class Account extends Component
         $trans->status = Trans::PAY_STATUS_SUCCEEDED;
         $trans->save();
 
-        return true;
+        return $trans->id;
     }
 
     /**
@@ -115,37 +132,73 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/11/30 16:22:19
     **/
-    public function confirmVouchTrans($trans) {
-        if ($tans->pay_mode != Trans::PAY_MODE_VOUCHPAY) {
+    public function confirmVouchPay($transId) {
+        $trans = Trans::findOne($transId);
+        if ($trans->pay_mode != Trans::PAY_MODE_VOUCHPAY) {
             throw new Exception('非担保交易无须确认');
+            return false;
         }
-
-        //获取担保账号
-        $vouchAccount = UserAccount::findOne($vouchAccountId);
 
         //金额从担保账号转出
-        if (!$vouchAccount->minus($money)) {
+        $vouchAccount = UserAccount::findOne($vouchAccountId);
+        if (!$vouchAccount->minus($trans->total_money)) {
             return false;
         }
 
-        //收款人获取收入
-        $sellerAccount = UserAccount::findOne($trans->to_uid);
-        if (!$sellerAccount->plus($trans->money)) {
+        //完成交易的后续操作
+        if (!$this->finishPay($trans)) {
             return false;
         }
-
-        //利润账号打入收益
-        $profitAccount = UserAccount::findOne($globalProfitAccountId);
-        $sellerAccount = UserAccount::findOne($trans->to_uid);
-        if (!$sellerAccount->plus($trans->money)) {
-            return false;
-        }
-
+        
         //变更交易状态
         $trans->status = Trans::PAY_STATUS_FINISHED;
         $trans->save();
 
         return true;
+    }
+
+    /**
+     * @brief 每个交易最后确认交易完成时所进行的操作，主要为打款给目的用户，分润，收取管理费等
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 17:31:52
+    **/
+    protected function finishPay($trans) {
+
+        //收款账户处理逻辑
+        $sellerAccount = UserAccount::findOne($trans->to_uid);
+        if (!$sellerAccount->plus($money)) {
+            return false;
+        }
+
+        //分润账号处理逻辑
+        if ($trans->profit > 0) {
+        $this->profit('pay', $trans_profit, '账号利润');
+        }
+
+        //手续费逻辑处理
+        if ($trans->fee > 0) {
+            $this->fee('pay', $fee, '支付手续费');
+        }
+
+    }
+
+    /**
+     * @brief 完成交易退款,该函数主要完成多种退款流程最后的利润退款，手续费退款等
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 18:02:59
+    **/
+    protected function finishRefund($transId) {
+
     }
 
     /**
@@ -158,7 +211,9 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/11/30 10:32:54
     **/
-    public function refundTrans($trans) {
+    public function refundTrans($transId) {
+
+        $trans = Trans::findOne($transId);
 
         //仅用户之间的交易支持退款
         if ($trans->type != Trans::TRANS_TYPE_TRADE) {
@@ -215,7 +270,7 @@ class Account extends Component
     }
 
     /**
-     * @brief 转账操作,转账操作属于直接支付给对方金额
+     * @brief 转账操作,转账操作属于直接支付给对方金额,扩展时使用
      *
      * @return  public function 
      * @retval   
@@ -224,7 +279,112 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/11/30 10:32:54
     **/
-    public function transferToAccount($trans) {
+    public function transferToAccount($transParams) {
+
+
+    }
+
+    /**
+     * @brief 用户提现，提现只能提取balance中的额度，保证金无法提取,该方法完成实际的提现操作
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 17:44:54
+    **/
+    public function withdraw($params) {
+
+        $trans = new Trans();
+        $trans->load($params, '');
+        $trans->save();
+
+
+        $withdrawUser = UserAccount::findOne($trans->from_uid);
+        if ($money > $withdrawUser->balance) {
+            return false;
+        }
+
+        //创建付款记录
+        $payable = new Payable();
+        $payable->money = $trans->money;
+        $payable->status = 1;
+        $payable->save();
+
+        $withdrawUser->freeze($trans->money);
+
+    }
+
+    /**
+     * @brief 提现付款给用户账号成功
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 20:31:42
+    **/
+    public function withdrawPaySucceeded($payId, $callback) {
+        
+        $payable = Payable::findOne($payId); 
+        $withdrawUser = UserAccount::findOne($payable->to_uid);
+        //完成冻结，将款项从冻结中减除
+        $withdrawUser->finishFreeze();
+        $payable->status = Payable::PAY_STATUS_SUCCEEDED;
+        $payable->save();
+        $trans = Trans::findOne($payable->trans_id);
+        $trans->status = Trans::PAY_STATUS_FINISHED;
+        $trans->save();
+
+        return true;
+
+    }
+
+    /**
+     * @brief 用户充值
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 17:49:22
+    **/
+    public function charge() {
+
+        $trans = new Trans();
+        $trans->load($params, '');
+        $trans->status = Trans::PAY_STATUS_WAITPAY;
+        $trans->save();
+
+        //新建收款记录
+        $receivable = new  Receivable();
+        $receivable->money = $trans->total_money;
+        $receivable->status = Receivable::PAY_STATUS_WAITPAY;
+        $receivable->save();
+
+    }
+
+    /**
+     * @brief 支付成功处理
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 21:14:32
+    **/
+    public function chargePaySucceeded($receivableId, $callback) {
+
+        $receivable = Receivable::findOne($receivableId);
+        $receivable->status = Receivable::PAY_STATUS_FINISHED;
+        $receivable->save();
+        $trans = Trans::findOne($receivable->trans_id);
+        //充值型trans，直接成功
+        $trans->status = Trans::PAY_STATUS_FINISHED;
 
     }
 
