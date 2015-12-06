@@ -10,6 +10,7 @@ use lubaogui\account\models\Bill;
  */
 class Account extends Component 
 {
+
     /**
      * @brief 用户直接购买另外一个用户的产品
      *
