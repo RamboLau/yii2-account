@@ -16,9 +16,9 @@
  *
  **/
 
-
 return [
-
+    'profit_account_id' => 2,
+    'fee_account_id' => 3
 ];
 
 

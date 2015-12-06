@@ -14,16 +14,18 @@ class m151205_132132_create_account extends Migration
         }
 
         $this->createTable('{{%user_account}}', [
-            'id' => $this->primaryKey(),
-            'username' => $this->string()->notNull()->unique(),
-            'auth_key' => $this->string(32)->notNull(),
-            'password_hash' => $this->string()->notNull(),
-            'password_reset_token' => $this->string()->unique(),
-            'email' => $this->string()->notNull()->unique(),
-
-            'status' => $this->smallInteger()->notNull()->defaultValue(10),
+            'uid' => $this->bigPrimaryKey(),
+            'type' => $this->smallInteger()->notNull()->defaultValue(1),
+            'currency' => $this->smallInteger()->notNull(),
+            'enabled' => $this->string()->notNull(),
+            'balance' => $this->string()->notNull(),
+            'deposit' => $this->string()->notNull(),
+            'frozon_money' => $this->string()->notNull(),
+            'pay_password' => $this->string()->unique(),
+            'last_balance_changed_ip' => $this->string()->notNull()->unique(),
+            'last_balance_changed_at' => $this->string()->notNull()->unique(),
             'created_at' => $this->integer()->notNull(),
-            'updated_at' => $this->integer()->notNull(),
+            'updated_at' => $this->integer()->notNull()
         ], $tableOptions);
 
         $this->createTable('{{%user_account_log}}', [
@@ -33,7 +35,6 @@ class m151205_132132_create_account extends Migration
             'password_hash' => $this->string()->notNull(),
             'password_reset_token' => $this->string()->unique(),
             'email' => $this->string()->notNull()->unique(),
-
             'status' => $this->smallInteger()->notNull()->defaultValue(10),
             'created_at' => $this->integer()->notNull(),
             'updated_at' => $this->integer()->notNull(),
@@ -46,7 +47,6 @@ class m151205_132132_create_account extends Migration
             'password_hash' => $this->string()->notNull(),
             'password_reset_token' => $this->string()->unique(),
             'email' => $this->string()->notNull()->unique(),
-
             'status' => $this->smallInteger()->notNull()->defaultValue(10),
             'created_at' => $this->integer()->notNull(),
             'updated_at' => $this->integer()->notNull(),
@@ -59,7 +59,6 @@ class m151205_132132_create_account extends Migration
             'password_hash' => $this->string()->notNull(),
             'password_reset_token' => $this->string()->unique(),
             'email' => $this->string()->notNull()->unique(),
-
             'status' => $this->smallInteger()->notNull()->defaultValue(10),
             'created_at' => $this->integer()->notNull(),
             'updated_at' => $this->integer()->notNull(),
@@ -72,7 +71,6 @@ class m151205_132132_create_account extends Migration
             'password_hash' => $this->string()->notNull(),
             'password_reset_token' => $this->string()->unique(),
             'email' => $this->string()->notNull()->unique(),
-
             'status' => $this->smallInteger()->notNull()->defaultValue(10),
             'created_at' => $this->integer()->notNull(),
             'updated_at' => $this->integer()->notNull(),

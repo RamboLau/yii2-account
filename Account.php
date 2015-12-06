@@ -2,6 +2,7 @@
 
 namespace lubaogui\account;
 
+use yii\helpers\ArrayHelper;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
 
@@ -10,6 +11,25 @@ use lubaogui\account\models\Bill;
  */
 class Account extends Component 
 {
+
+    
+
+    /**
+     * @brief 
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/06 10:12:27
+    **/
+    public function init() {
+        $config = yii\helpers\ArrayHelper::merge(
+            require(__DIR__ . '/config/main.php'),
+            require(__DIR__ . '/config/main-local.php')
+        );
+    }
 
     /**
      * @brief 用户直接购买另外一个用户的产品
