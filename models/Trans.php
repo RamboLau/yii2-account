@@ -81,6 +81,7 @@ class Trans extends ActiveRecord
         return $this->hasMany(Bills::className(), ['trans_id'=>'id']);
     }
 
+
 }
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */
