@@ -91,7 +91,17 @@ class AccountController extends Controller
     **/
     public function actionVouchPay()
     {
+        $model = new VouchPayForm();
+        if ($model->load(Yii::$app->request->post())) {
 
+            //处理逻辑
+            $this->redirect();
+        }
+        else {
+            return $this->render('charge',[
+                'model' => $model
+            ]);
+        } 
     }
 
     /**
@@ -104,9 +114,17 @@ class AccountController extends Controller
      * @date 2015/12/08 22:34:28
     **/
     public function actionDirectPay() {
+        $model = new DirectPayForm();
+        if ($model->load(Yii::$app->request->post())) {
 
-
-
+            //处理逻辑
+            $this->redirect();
+        }
+        else {
+            return $this->render('charge',[
+                'model' => $model
+            ]);
+        } 
     }
 
 }
