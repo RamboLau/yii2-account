@@ -34,18 +34,26 @@ class Account extends Component
     }
 
     /**
-     * @brief 获取账户状态
+     * @brief 获取账户状态, 如果用户账户不存在，则自动为用户开通一个账号
      *
-     * @return  public function 
-     * @retval   
+     * @return  object 用户账户对象 
      * @see 
      * @note 
      * @author 吕宝贵
      * @date 2015/12/06 17:59:27
      **/
-    public function getBalance($uid) {
+    public function getUserAccount($uid) {
         $userAccount = UserAccount::findOne($uid);
-        return  $userAccount->balance;
+        if (!$userAccount) {
+            $userAccount = new UserAccount();
+            $userAccount->uid = $uid;
+            $userAccount->balance = 0;
+            $userAccount->frozen_meony = 0;
+            $userAccount->deposit = 0;
+            $userAccount->currency = 1; //默认只支持人民币
+            $userAccount->save();
+        }
+        return  $userAccount;
     }
 
     /**
@@ -58,17 +66,7 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/11/30 10:32:38
      **/
-    public function directPay($transParams) {
-
-        $trans = null;
-        if (is_array($transParams)) {
-            $trans = new Trans();
-            $trans->load($transParams, '');
-            $trans->save();
-        }
-        else {
-            $trans = $transParams;
-        }
+    public function pay($trans) {
 
         $buyerAccount = UserAccount::findOne($trans->from_uid);
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
@@ -76,63 +74,33 @@ class Account extends Component
             return false;
         }
 
-        //提交给账户进行扣款,账单，账户变化都进行更新,对于买家，扣除total_money
-        if (!$buyerAccount->minus($trans->total_money)) {
-            return false;
+        //直接支付交易
+        if ($trans->pay_mode == Trans::PAY_MODE_DIRECTPAY) {
+            //提交给账户进行扣款,账单，账户变化都进行更新,对于买家，扣除total_money
+            if (!$buyerAccount->minus($trans->total_money)) {
+                return false;
+            }
+
+            //完成交易的后续操作，如扣费等
+            if (!$this->finishPayTrans($trans)) {
+                return false;
+            }
         }
 
-        //完成交易的后续操作，如扣费等
-        if (!$this->finishPayTrans($trans)) {
-            return false;
-        }
+        //担保支付交易操作
+        if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
+            //资金打入到担保账号
+            $vouchAccount = UserAccount::findOne($vouchAccountId);
+            if (!$vouchAccount->plus($money)) {
+                return false;
+            }
 
-        return $trans->id;
-    }
-
-    /**
-     * @brief 担保交易支付,担保交易支付先将资金从购买者手中扣除，支付给担保人账号，确认收入之后将资金划给目标用户账号
-     *
-     * @return  public 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/03 06:53:03
-     **/
-    public vouchPay($transParams) {
-
-        $trans = null;
-        if (is_array($transParams)) {
-            $trans = new Trans();
-            $trans->load($transParams);
+            //变更交易状态
+            $trans->status = Trans::PAY_STATUS_SUCCEEDED;
             $trans->save();
         }
-        else {
-            $trans = $transParams;
-        }
-
-        $buyerAccount = UserAccount::findOne($trans->from_uid);
-        if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
-            throw new Exception('非普通账号不支持直接交易!请联系管理员');
-        }
-
-        //提交给账户进行扣款,账单，账户变化都进行更新,扣款逻辑中会检查用户的余额是否充足
-        if (!$buyerAccount->minus($trans->total_money)) {
-            return false;
-        }
-
-        //资金打入到担保账号
-        $vouchAccount = UserAccount::findOne($vouchAccountId);
-        if (!$vouchAccount->plus($money)) {
-            return false;
-        }
-
-        //变更交易状态
-        $trans->status = Trans::PAY_STATUS_SUCCEEDED;
-        $trans->save();
 
         return $trans->id;
-
     }
 
     /**
