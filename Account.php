@@ -364,18 +364,11 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/12/06 17:49:22
      **/
-    public function chargeForTrans($paramsOrder,$paramsCharge) {
-
-        //新建交易,应当包含交易类型
-        $transOrder = new Trans();
-        $transOrder->load($paramsOrder, '');
-        $transOrder->status = Trans::PAY_STATUS_WAITPAY;
-        $transOrder->save();
+    public function chargeForTrans($trans) {
 
         $transCharge = new Trans();
-        $transCharge->load($paramsCharge, '')
-            //充值是否为了某一个交易，如果是，则充值完成之后自动尝试完成该交易
-            $transCharge->trans_id_ext = $transOrder->id;
+        $transCharge->load($paramsCharge, '');
+        $transCharge->trans_id_ext = $trans->id;
 
         //新建收款记录
         $receivable = new  Receivable();
