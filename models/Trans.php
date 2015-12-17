@@ -28,7 +28,7 @@ class Trans extends ActiveRecord
     const PAY_MODE_DIRECTPAY = 1;
     const PAY_MODE_VOUCHPAY = 2;
 
-    //支付状态，等待支付，支付成功，支付完成（确认支付给对方,交易完成）,退款中， 退款完成 
+    //支付状态，等待支付，支付成功，支付完成（确认支付给对方,交易完成), 退款审核, 退款中， 退款完成 
     const PAY_STATUS_WAITPAY = 1;
     const PAY_STATUS_SUCCEEDED = 2;
     const PAY_STATUS_FINISHED = 3;
@@ -38,6 +38,16 @@ class Trans extends ActiveRecord
     const TRANS_TYPE_CHARGE = 1;
     const TRANS_TYPE_WITHDRAW = 2;
     const TRANS_TYPE_TRADE = 3;
+
+
+    public function rules() {
+
+        return [
+            'create'=>[],
+            'update'=>[],
+            ];
+
+    }
 
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义
@@ -49,7 +59,6 @@ class Trans extends ActiveRecord
     public static function tableName() {
         return '{{%trans}}';
     }
-
 
     /**
      * @brief 自动设置 created_at和updated_at
@@ -80,7 +89,6 @@ class Trans extends ActiveRecord
     public function getBills() {
         return $this->hasMany(Bills::className(), ['trans_id'=>'id']);
     }
-
 
 }
 
