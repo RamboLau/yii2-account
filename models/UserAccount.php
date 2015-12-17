@@ -25,10 +25,15 @@ use yii\behaviors\TimestampBehavior;
 class UserAccount extends ActiveRecord 
 {
 
-    //账户类型,三种，普通账户，公司账户，银行账户
+    //账户类型,三种，普通账户，公司账户，银行账户,默认时普通用户账户
     const ACCOUNT_TYPE_NORMAL = 1;
     const ACCOUNT_TYPE_COMPANY = 2;
     const ACCOUNT_TYPE_BANK = 3;
+
+    //支出类型
+
+    const BALANCE_TYPE_INCOME = 1;
+    const BALANCE_TYPE_MINUS = 2;
 
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义
@@ -55,6 +60,35 @@ class UserAccount extends ActiveRecord
         return [
             TimestampBehavior::className(),
         ];
+    }
+
+    /**
+     * @brief 
+     *
+     * @param int $uid 用户id
+     * @param int $type 用户账号类型
+     * @param int $currency 货币类型，默认为１, 人民币
+     * @return  bool 是否创建成功 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/17 11:15:12
+    **/
+    public function createAccount($uid, $type = ACCOUNT_TYPE_NORMAL, $currency = 1) {
+
+        $account = new static();
+        $account->uid = $uid;
+        $account->currency = $currency;
+        $account->type = $type;
+
+        if ($account->save()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+
     }
 
     /**
@@ -93,13 +127,30 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/04 22:57:20
     **/
-    public function minus($money) {
+    public function minus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
 
-        $this->balance = $this->balance -  $money;
+        $this->balance = $this->balance - $money;
         if ($this->save()) {
+            //记录账单
             $bill = new Bill();
+            $bill->uid = $this->uid;
+            $bill->trans_id = $transId;
+            $bill->trans_type_id = $transId;
+            $bill->trans_type_name = $transTypeName;
+            $bill->money = $money;
+            $bill->balance_type = static::BALANCE_TYPE_MINUS;
+            $bill->currency = $currency;
+            $bill->description = $description;
             $bill->save();
+
+            //账户快照
             $accountLog = new UserAccountLog();
+            $accountLog->uid = $this->uid;
+            $accountLog->balance = $this->balance;
+            $accountLog->deposit = $this->deposit;
+            $accountLog->frozen_money = $this->frozen_money;
+            $accountLog->frozen_money = $this->frozen_money;
+
             $accountLog->save();
             return true;
         } 
