@@ -1,6 +1,5 @@
 <?php
-/***************************************************************************
- *
+/*************************************************************************** *
  * Copyright (c) 2015 Lubanr.com All Rights Reserved
  *
  **************************************************************************/
@@ -32,7 +31,7 @@ class UserAccount extends ActiveRecord
 
     //支出类型
 
-    const BALANCE_TYPE_INCOME = 1;
+    const BALANCE_TYPE_PLUS = 1;
     const BALANCE_TYPE_MINUS = 2;
 
     /**
@@ -101,15 +100,47 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/01 16:26:45
     **/
-    public function plus($money) {
+    public function plus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
 
         $this->balance += $money;
         if ($this->save()) {
+            //记录账单
             $bill = new Bill();
-            $bill->save();
+            $bill->uid = $this->uid;
+            $bill->trans_id = $transId;
+            $bill->trans_type_id = $transId;
+            $bill->trans_type_name = $transTypeName;
+            $bill->money = $money;
+            $bill->balance_type = static::BALANCE_TYPE_PLUS;
+            $bill->currency = $currency;
+            $bill->description = $description;
+            if ($bill->save()) {
+                return true;
+            }
+            else {
+                return false;
+            }
+
+            //账户快照产生
             $accountLog = new UserAccountLog();
-            $accountLog->save();
-            return true;
+            $accountLog->uid = $this->uid;
+            $accountLog->account_type = $this->account_type;
+            $accountLog->currency = $currency;
+            $accountLog->balance = $this->balance;
+            $accountLog->deposit = $this->deposit;
+            $accountLog->frozen_money = $this->frozen_money;
+            $accountLog->descrption = $this->dsctcrption;
+            $accountLog->balance_type = static::BALANCE_TYPE_PLUS;
+            $accountLog->trans_money = $money;
+            $accountLog->trans_desc = $description;
+
+            if ($accountLog->save()) {
+                return true;
+            }
+            else {
+                return false;
+            }
+
         }    
         else {
             return false;
@@ -141,18 +172,32 @@ class UserAccount extends ActiveRecord
             $bill->balance_type = static::BALANCE_TYPE_MINUS;
             $bill->currency = $currency;
             $bill->description = $description;
-            $bill->save();
+            if ($bill->save()) {
+                return true;
+            }
+            else {
+                return false;
+            }
 
-            //账户快照
+            //账户快照产生
             $accountLog = new UserAccountLog();
             $accountLog->uid = $this->uid;
+            $accountLog->account_type = $this->account_type;
+            $accountLog->currency = $currency;
             $accountLog->balance = $this->balance;
             $accountLog->deposit = $this->deposit;
             $accountLog->frozen_money = $this->frozen_money;
-            $accountLog->frozen_money = $this->frozen_money;
+            $accountLog->descrption = $this->dsctcrption;
+            $accountLog->balance_type = static::BALANCE_TYPE_MINUS;
+            $accountLog->trans_money = $money;
+            $accountLog->trans_desc = $description;
 
-            $accountLog->save();
-            return true;
+            if ($accountLog->save()) {
+                return true;
+            }
+            else {
+                return false;
+            }
         } 
         else {
             return false;

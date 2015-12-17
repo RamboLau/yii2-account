@@ -90,6 +90,20 @@ class Trans extends ActiveRecord
         return $this->hasMany(Bills::className(), ['trans_id'=>'id']);
     }
 
+    /**
+     * @brief 获取关联的交易类型信息
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/17 20:38:48
+    **/
+    public function getTransType() {
+        return $this->hasOne(TransType::className(), ['id'=>'trans_type_id'];
+    }
+
 }
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */
