@@ -66,15 +66,37 @@ class AccountController extends Controller
     **/
     public function actionCharge()
     {
-        $model = new ChargeForm();
-        if ($model->load(Yii::$app->request->post())) {
+        $channels = PayChannel::find()->select(['id', 'name', 'alias', 'description'])->indexBy('id')->all();
+        $chargeForm = new ChargeForm();
+        $postParams = Yii::$app->request->post();
+        $transaction = Yii::$app->beginTransaction();
+        if ($chargeForm->load($postParams, '') && $chargeForm->generateTrans()) {
 
-            //处理逻辑
-            $this->redirect();
+            $trans = $chargeForm->getTrans();
+            //生成提交给支付模块的待付款记录
+            $receivable = new Receivable();
+            $receivable->trans_id = $trans->id;
+            $receivable->channel_id = $chargeForm->channel_id;
+            $receivable->money = $trans->total_money;
+            if ($receivable->save()) {
+                $transaction->commit();
+            }
+            else {
+                $transaction->rollback();
+                throw new Exception('支付记录创建失败');
+            }
+
+            $payChannel = PayChannel::findOne($$chargeForm->channel_id);
+
+            //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
+            $payment = new lubaogui\payment\Payment($payChannel->alias); 
+            $payment->gotoPay($receivable);
+
         }
         else {
             return $this->render('charge',[
-                'model' => $model
+                'model' => $chargeForm,
+                'channels'=>$channels,
             ]);
         } 
     }
