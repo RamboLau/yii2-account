@@ -10,36 +10,61 @@ use lubaogui\account\models\Trans;
  */
 class PayForm extends Model
 {
-    //订单id
-    public $order_id;
+    //预订id
+    public $booking_id;
 
-    //发起用户uid,一般为购买方
-    public $from_uid;
-
-    //收款id
-    public $to_uid;
-
-    //支付模式,只有在用户余额不足的时候才会启用
-    public $provider_id;
-
-    //支付模式，支付模式一般需要从订单表中获取，或者采用回调的方式获取
-    private $payMode;
+    private $booking;
 
     //由用户提交信息产生的trans,用户提交的支付额度等信息不可信，实际信息需要从订单表和产品表中获取生成trans
     private $trans;
 
-    //由用户提交信息产出订单
-    private $order;
-
     /**
-     * @inheritdoc
-     */
+     * @brief 返回变量验证规则
+     *
+     * @return array 验证的规则组合 
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/19 20:39:44
+    **/
     public function rules()
     {
         return [
-            [['trans_id_ext', 'from_uid', 'to_uid', 'money'], 'required'],
-            ['pay_mode'], 'integer'],
+            [['booking_id'], 'integer', 'required'],
         ];
+    }
+
+    /**
+     * @brief 根据用户的输入产生交易记录
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/19 20:39:07
+    **/
+    public function generateTrans() {
+
+        $product = Tour::findOne(['id'=>$booking->product_id]);
+
+        $buyerAccount = UserAccount::findOne(Yii::$app->user->identity['uid']);
+
+        //根据booking_id生成交易记录
+        $trans = new Trans();
+        $trans->pay_mode = $product->pay_mode;
+        $trans->trans_type_id = $product->pay_mode;
+        $trans->total_money = $booking->total_money;
+        $trans->profit = $booking->profit;
+        $trans->earnest_money = $booking->earnest_money;
+        $trans->trans_id_ext = $this->booking_id;
+        $trans->from_uid = Yii::$app->user->identity['uid'];
+        $trans->from_uid = $product->uid;
+        $trans->status = 1; //1为等待支付状态
+
+        //判断是否需要额外支付
+
+        return true;
     }
 
     /**
@@ -47,16 +72,17 @@ class PayForm extends Model
      *
      * @return Trans 返回trans实例
      */
-    public function getTrans($order, $product)
+    public function getTrans()
     {
-        $trans = null;
-        if ($order->trans_id) {
-            $trans = Trans::findOne(['id'=>'trans_id']);
+        $this->booking = Booking::findOne(['id'=>$this->booking_id, 'uid'=>Yii::$app->user->identity['uid']]);
+        if (empty($this->booking)) {
+            throw new Exception('并不存在这个预订');
         }
-        else {
-            $trans = $this->generateTrans();
+
+        if (empty($booking->trans_id)) {
+            $this->trans = $this->generateTrans();
         }
-        return $trans;
+        return $this->trans;
     }
 
     /**
