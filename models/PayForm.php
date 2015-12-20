@@ -4,6 +4,8 @@ namespace frontend\models;
 use Yii;
 use yii\base\Model;
 use lubaogui\account\models\Trans;
+use common\models\Booking;                                                                                                                             
+use common\models\Product;   
 
 /**
  * Pay form 该form从用户端获取交易信息，需要从订单表，产品表中获取分润信息，交易方式等
@@ -46,7 +48,7 @@ class PayForm extends Model
     **/
     public function generateTrans() {
 
-        $product = Tour::findOne(['id'=>$booking->product_id]);
+        $product = Product::findOne(['pid'=>$booking->product_id]);
 
         $buyerAccount = UserAccount::findOne(Yii::$app->user->identity['uid']);
 
@@ -74,7 +76,7 @@ class PayForm extends Model
      */
     public function getTrans()
     {
-        $this->booking = Booking::findOne(['id'=>$this->booking_id, 'uid'=>Yii::$app->user->identity['uid']]);
+        $this->booking = Booking::findOne(['bid'=>$this->booking_id, 'uid'=>Yii::$app->user->identity['uid']]);
         if (empty($this->booking)) {
             throw new Exception('并不存在这个预订');
         }
