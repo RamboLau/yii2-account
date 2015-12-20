@@ -22,7 +22,7 @@ create table `user_account` (
     `deposit` decimal(16,2) not null default 0.00 comment '保证金', 
     `frozon_money` decimal(16,2) not null default 0.00 comment '冻结资金', 
     `pay_password` varchar(64) not null default '' comment '支付密码',
-    `last_balance_change_ip` char(15) not null default '' comment '上次帐户余额更新ip'
+    `last_balance_changed_ip` char(15) not null default '' comment '上次帐户余额更新ip'
     `last_balance_changed_at` char(12) not null default '' comment '上次帐户结余变更时间'
     `created_at` int(10) unsigned not null default 0 comment '账户开启时间', 
     `updated_at` int(10) not null default 0 comment '账户更新时间',
@@ -39,7 +39,6 @@ create table `user_account_log` (
     `uid` int unsigned not null comment '用户id',  
     `account_type` smallint unsigned not null default 1 comment '帐户类型:', 
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币'
-    `enabled` tinyint(1) unsigned not null default 0 comment '账号状态: 1 有效 2 异常封禁 0为非法值',
     `trans_id` varchar(32) not null default '' comment '和变动关联的交易单号',
     `balance` decimal(16,2) not null default 0.00 comment '用户账户剩余资金', 
     `deposit` decimal(16,2) not null default 0.00 comment '用户冻结资金', 
@@ -94,13 +93,13 @@ create table `trans_type` (
 
 drop table if exists `trans`;
 create table `trans` (
-    `id` bigint unsigned not null primary key  comment '交易流水id',
-    `trans_id_ext` bigint unsigned not null default  comment '外部交易号id,如订单号,对于充值来讲，如果存在该值，代表是关联订单号',
+    `trans_id` varchar(32) not null primary key  comment '交易流水id',
+    `trans_id_ext` varchar(32) not null default  comment '外部交易号id,如订单号,可为空',
     `enabled` tinyint(1) unsigned not null default 0 comment '账号状态: 1 有效 2 异常封禁 0为非法值',
     `trans_type_id` smallint unsigned not null comment '交易类型id',
     `settlement_type` tinyint(1) unsigned not null comment '结算类型: 1 实时结算 2 异步结算, 目前仅支持实时结算',
     `pay_mode` tinyint unsigned not null comment '交易模式: 1 中介担保支付, 2 直付交易 3 预付款 0 非法',
-    `status` tinyint(1) not null default 0 comment '交易状态:0.等待付款 1.付款成功 2.交易成功:整个流程完成 3.退款中 4.退款完成',
+    `status` tinyint(1) not null default 0 comment '交易状态:1.等待付款 2.付款成功 3.交易成功:整个流程完成 4.退款中 5.退款完成',
     `from_uid` bigint(20) unsigned not null default '0' comment '交易发起方',
     `from_account_type` smallint unsigned not null default 1 comment '帐户类型:', 
     `from_username` bigint(20) unsigned not null default '0' comment '交易发起方账户名',
@@ -206,6 +205,7 @@ create table `trans_refund_log` (
     `created_at` int(10) not null default 0 comment '创建时间',
     `updated_at` int(10) not null default 0 comment '创建时间',
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易退款历史表';
+
 
 ------------
 -- profit_bill 收益账单，账单是每个用户入账或者是出账的记录，一个交易大部分会有两条账单记录，一条发起方，一条收入方, 账单的生成虽不同的, profit类型有: 1 手续费  2 利润分成, 对于收益账单，单独用一个表来储存，因为此表的记录数量会比较大,但是查询的次数不多
