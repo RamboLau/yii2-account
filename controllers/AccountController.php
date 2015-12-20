@@ -6,6 +6,7 @@ use yii\base\InvalidParamException;
 use yii\web\Controller;
 use yii\filters\VerbFilter;                                
 use yii\filters\AccessControl;                                
+use lubaogui\payment\models\PayChannel; 
 
 /**
  * Account controller
@@ -19,15 +20,10 @@ class AccountController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout', 'signup'],
+                'only' => ['detail' ,'pay', 'charge'],
                 'rules' => [
-                    [
-                        'actions' => ['signup'],
-                        'allow' => true,
-                        'roles' => ['?'],
-                    ],
-                    [
-                        'actions' => ['logout'],
+                     [
+                        'actions' => ['detail' ,'pay', 'charge'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -36,7 +32,8 @@ class AccountController extends Controller
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
-                    'logout' => ['post'],
+                    'charge' => ['post'],
+                    'pay' => ['post'],
                 ],
             ],
         ];
@@ -58,6 +55,24 @@ class AccountController extends Controller
         ];
     }
 
+
+    /**
+     * @brief 返回账户详细信息，该操作用户必须登录
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/20 19:53:21
+    **/
+    public function actionDetail() {
+
+        $userAccount = UserAccount::find()->select(['uid', 'currency', 'balance', 'frozon_money' ])->where(['uid'=>Yii::$app->user->identity['uid']]);
+        return $userAccount;
+
+    }
+
     /**
      * @brief 用户直接充值页面操作
      *
@@ -71,7 +86,7 @@ class AccountController extends Controller
     public function actionCharge()
     {
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
-        $chargeForm = new $returnChargeForm();
+        $chargeForm = new $ChargeForm();
         $postParams = Yii::$app->request->post();
         $transaction = Yii::$app->beginTransaction();
         if ($chargeForm->load($postParams, '') && $chargeForm->generateTrans()) {
@@ -187,7 +202,7 @@ class AccountController extends Controller
     **/
     public function actionPayNotify() {
 
-        $channels = PayChannel::find()->select(['id', 'name', 'alias', 'description'])->indexBy('id')->all();
+        $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payChannelId = Yii::$app->request->post('channel_id');
 
         $payment = new Payment($channels[$payChannelId]['alias']);
@@ -228,7 +243,6 @@ class AccountController extends Controller
      * @date 2015/12/20 11:44:17
     **/
     protected function processPaySuccess($data) {
-
         //用户支付成功
         $receivable = Receivable::findOne(['id'=>$data['receivable_id']]);
         if ($receivable->status === Receivable::PAY_STATUS_FINISHED) {
@@ -254,18 +268,15 @@ class AccountController extends Controller
                             return false;
                         }
                     }
-                    
                 }
                 else {
                     return false;
                 }
-
             }
             else {
                 throw new Exception('处理失败，请联系管理员');
             }
         }
-
     }
 
     /**
