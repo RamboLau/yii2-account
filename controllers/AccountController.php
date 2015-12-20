@@ -2,6 +2,10 @@
 namespace frontend\controllers;
 
 use Yii;
+use yii\base\InvalidParamException;                                
+use yii\web\Controller;
+use yii\filters\VerbFilter;                                
+use yii\filters\AccessControl;                                
 
 /**
  * Account controller
@@ -66,7 +70,7 @@ class AccountController extends Controller
     **/
     public function actionCharge()
     {
-        $channels = PayChannel::find()->select(['id', 'name', 'alias', 'description'])->indexBy('id')->all();
+        $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $chargeForm = new $returnChargeForm();
         $postParams = Yii::$app->request->post();
         $transaction = Yii::$app->beginTransaction();
@@ -117,7 +121,7 @@ class AccountController extends Controller
     **/
     public function actionPay()
     {
-        $channels = PayChannel::find()->select(['id', 'name', 'alias', 'description'])->indexBy('id')->all();
+        $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payForm = new PayForm();
         if ($payForm->load(Yii::$app->request->post())) {
 
@@ -227,8 +231,40 @@ class AccountController extends Controller
 
         //用户支付成功
         $receivable = Receivable::findOne(['id'=>$data['receivable_id']]);
-        //代收款的成功处理逻辑
-        $receivable->paySuccess();
+        if ($receivable->status === Receivable::PAY_STATUS_FINISHED) {
+            return false;
+        }
+        else {
+            //代收款的成功处理逻辑
+            if ($receivable->paySuccess()) {
+                $trans = Trans::findOne($receivable->trans_id);
+                if (empty($trans)) {
+                    return false;
+                }
+                //交易状态需要变更为成功,对于充值型服务，不提供退款，此状态为最终状态
+                if ($trans->status !== Trans::PAY_STATUS_FINISHED) {
+                    $trans->status = Trans::PAY_STATUS_FINISHED;
+                    //如果交易存在关联交易，则出发关联交易的支付过程
+                    if ($trans->trans_id_ext) {
+                        $transExt = Trans::findOne($trans->trans_id_ext);
+                        if (Yii::$app->account->pay($transExt)) {
+                            return true;
+                        }
+                        else {
+                            return false;
+                        }
+                    }
+                    
+                }
+                else {
+                    return false;
+                }
+
+            }
+            else {
+                throw new Exception('处理失败，请联系管理员');
+            }
+        }
 
     }
 

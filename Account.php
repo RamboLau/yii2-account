@@ -68,6 +68,8 @@ class Account extends Component
      **/
     public function pay($trans) {
 
+        //判断trans是否已经完成，如果已经完成，则不允许第二次支付
+
         $buyerAccount = UserAccount::findOne($trans->from_uid);
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
             //throw new Exception('非普通账号不支持直接交易!请联系管理员');
