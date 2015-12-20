@@ -4,7 +4,9 @@ namespace frontend\models;
 use Yii;
 use yii\base\Model;
 use lubaogui\account\models\Trans;
+use lubaogui\account\models\UserAccount;
 use common\models\Booking;                                                                                                                             
+use common\models\Product;   
 use common\models\Product;   
 
 /**
@@ -63,10 +65,13 @@ class PayForm extends Model
         $trans->from_uid = Yii::$app->user->identity['uid'];
         $trans->from_uid = $product->uid;
         $trans->status = 1; //1为等待支付状态
+        if ($trans->save()) {
+            return $trans;
+        }
+        else {
+            return false;
+        }
 
-        //判断是否需要额外支付
-
-        return true;
     }
 
     /**
