@@ -172,7 +172,7 @@ class AccountController extends Controller
     }
 
     /**
-     * @brief 处理充值消息通知的action
+     * @brief 处理充值消息通知的action,对于notify来讲，不需要做页面跳转，只需要针对不同的支付方式返回对应的状态
      *
      * @return  public function 
      * @retval   
@@ -183,11 +183,67 @@ class AccountController extends Controller
     **/
     public function actionPayNotify() {
 
-        //验证返回通知的真实性
-        if (Yii::$app->payment->verifyReturn()) {
-            //处理逻辑
+        $channels = PayChannel::find()->select(['id', 'name', 'alias', 'description'])->indexBy('id')->all();
+        $payChannelId = Yii::$app->request->post('channel_id');
 
+        $payment = new Payment($channels[$payChannelId]['alias']);
+        //根据回调地址，确定支付通知来源
+
+        $handlers = [
+            'paySuccessHandler'=>[$this, 'processPaySuccess'],
+            'payFailHandler'=>[$this, 'processPayFailure'],
+            ];
+
+        $transaction = $this->beginTransaction();
+        $payment->setHandlers($handlers);
+
+        //业务逻辑都在handlers中实现
+        try {
+            if ($payment->processNotify()) {
+                $transaction->commit();
+            }
+            else {
+                $transaction->rollback();
+            }
+        } 
+        catch (Exception $e) {
+            throw new Exception($e->getMessage());
         }
+        
+    }
+
+
+    /**
+     * @brief 支付成功的回调方法
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/20 11:44:17
+    **/
+    protected function processPaySuccess($data) {
+
+        //用户支付成功
+        $receivable = Receivable::findOne(['id'=>$data['receivable_id']]);
+        //代收款的成功处理逻辑
+        $receivable->paySuccess();
+
+    }
+
+    /**
+     * @brief 支付失败的回调方法
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/20 11:44:28
+    **/
+    protected function processPayFailure($data) {
+
     }
 
 }
