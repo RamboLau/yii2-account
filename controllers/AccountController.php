@@ -206,7 +206,8 @@ class AccountController extends Controller
     public function actionPayNotify() {
 
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
-        $payChannelId = Yii::$app->request->post('channel_id');
+        //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
+        $payChannelId = Yii::$app->request->get('channel_id');
 
         $payment = new Payment($channels[$payChannelId]['alias']);
         //根据回调地址，确定支付通知来源
@@ -277,7 +278,7 @@ class AccountController extends Controller
                 }
             }
             else {
-                throw new Exception('处理失败，请联系管理员');
+                return false;
             }
         }
     }
