@@ -145,12 +145,12 @@ class AccountController extends Controller
         if ($payForm->load(Yii::$app->request->post())) {
 
             //根据form产生trans,trans处于未支付状态
+            $transaction = Yii::$app->beginTransaction();
             $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->uid);
             $trans = $payForm->getTrans();
 
             //如果账户余额大于交易的总金额，则直接支付
             if ($userAccount->balance >= $trans->total_money) {
-                $transaction = $this->beginTransaction();
                 if (Yii::$app->account->pay($trans)) {
                     $transaction->commit();
                     //设置通知消息
@@ -164,11 +164,13 @@ class AccountController extends Controller
                 }
             }
             else {
+
+                $transaction = $this->beginTransaction();
                 $receivable = Yii::$app->account->chargeForTrans($trans);
                 //如果账户余额不足，则根据$receivable的金额去充值,
                 //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
                 $payment = new Payment();
-                $payChannel = PayChannel::findOne($$chargeForm->channel_id);
+                $payChannel = PayChannel::findOne($payForm->channel_id);
 
                 //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
                 $payment = new Payment($payChannel->alias); 
@@ -177,19 +179,16 @@ class AccountController extends Controller
                     $returnType = 'QRCodeUrl';
                 }
 
-                $payment->gotoPay($receivable, $returnType);
+                //跳转到支付或者返回支付二维码地址
+                return $payment->gotoPay($receivable, $returnType);
             }
         }
         else {
             //如果用户没有提交支付，则认为是需要渲染页面
             return $this->render('pay',[
-                'model' => $payForm
-            ]);
-            return $this->render('charge',[
                 'model' => $payForm,
                 'channels'=>$channels,
             ]);
-
         } 
 
     }

@@ -5,8 +5,7 @@ use Yii;
 use yii\base\Model;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\UserAccount;
-use common\models\Booking;                                                                                                                             
-use common\models\Product;   
+use common\models\Booking;
 use common\models\Product;   
 
 /**
@@ -82,8 +81,14 @@ class PayForm extends Model
     public function getTrans()
     {
         $this->booking = Booking::findOne(['bid'=>$this->booking_id, 'uid'=>Yii::$app->user->identity['uid']]);
+
         if (empty($this->booking)) {
-            throw new Exception('并不存在这个预订');
+            return false;
+        }
+
+        //如果预定已经成功支付，则不允许用户进行第二次支付
+        if ($this->booking->status > Booking::PAY_STATUS_SUCCEEDED) {
+            return false;
         }
 
         if (empty($booking->trans_id)) {
