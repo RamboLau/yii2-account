@@ -8,13 +8,13 @@ use yii\filters\VerbFilter;
 use yii\filters\AccessControl;                                
 use lubaogui\payment\models\PayChannel; 
 use common\models\Booking; 
-use lubaogui\account\models\UserAccount; 
-use frontend\models\PayForm;
+use lubaogui\account\models\Payable; 
+use frontend\models\PayableForm;
 
 /**
- * Account controller
+ * Payable controller
  */
-class AccountController extends Controller
+class PayableController extends Controller
 {
     public $enableCsrfValidation = true;
 
@@ -60,7 +60,7 @@ class AccountController extends Controller
 
 
     /**
-     * @brief 返回账户详细信息，该操作用户必须登录
+     * @brief 返回支付的详细信息
      *
      * @return  public function 
      * @retval   
@@ -71,58 +71,60 @@ class AccountController extends Controller
     **/
     public function actionDetail() {
 
-        $userAccount = UserAccount::find()->select(['uid', 'currency', 'balance', 'frozon_money' ])->where(['uid'=>Yii::$app->user->identity['uid']]);
-        return $userAccount;
+        $userPayable = UserPayable::find()->select(['uid', 'currency', 'balance', 'frozon_money' ])->where(['uid'=>Yii::$app->user->identity['uid']]);
+        return $userPayable;
 
     }
 
     /**
-     * @brief 用户直接充值页面操作
+     * @brief 获取审核通过的需要支付给用户的列表 
+     *
+     * @return  public function 
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/08 22:35:12
+    **/
+    public function actionIndex()
+    {
+        $payables = Payable::find()->where()->indexBy('id')->all();
+
+    }
+
+    /**
+     * @brief 将需要支付给用户的款项列表导出到excel
      *
      * @return  public function 
      * @retval   
      * @see 
      * @note 
      * @author 吕宝贵
-     * @date 2015/12/08 22:35:12
+     * @date 2015/12/22 18:13:36
     **/
-    public function actionCharge()
-    {
-        $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
-        $chargeForm = new $ChargeForm();
-        $postParams = Yii::$app->request->post();
-        $transaction = Yii::$app->beginTransaction();
-        if ($chargeForm->load($postParams, '') && $chargeForm->generateTrans()) {
+    public function actionExportToExcel() {
+        $payables = Payable::find()->where()->indexBy('id')->all();
 
-            $trans = $chargeForm->getTrans();
-            //生成提交给支付模块的待付款记录
-            $receivable = new Receivable();
-            $receivable->trans_id = $trans->id;
-            $receivable->channel_id = $chargeForm->channel_id;
-            $receivable->money = $trans->total_money;
-            if ($receivable->save()) {
-                $transaction->commit();
-            }
-            else {
-                $transaction->rollback();
-                throw new Exception('支付记录创建失败');
-            }
+        return Yii::$app->excel->exportToExcel($payables);
+    }
 
-            //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
-            $payChannel = PayChannel::findOne($$chargeForm->channel_id);
-            $payment = new Payment($payChannel->alias); 
-            $returnType = null;
-            if ($payChannel->alias == 'wechatpay') {
-                $returnType = 'QRCodeUrl';
-            }
-            $payment->gotoPay($receivable, $returnType);
+    /**
+     * @brief 从银行返回的excel列表总导出支付成功和失败信息，用于后续处理,解冻，结算等。
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/22 18:14:17
+    **/
+    public function actionImportFromExcel() {
+        $excelFile = Yii::$app->request->post('payables');
+        $payables = $excelFile->parseToArray();
+
+        //循环处理支付结果，对有问题的结果写入文件，导出给用户,一天提取的款项默认不多，因此不需要做异步处理
+        foreach ($payables as $payable) {
+
         }
-        else {
-            return $this->render('charge',[
-                'model' => $chargeForm,
-                'channels'=>$channels,
-            ]);
-        } 
     }
 
     /**
@@ -143,11 +145,11 @@ class AccountController extends Controller
 
             //根据form产生trans,trans处于未支付状态
             $transaction = Yii::$app->beginTransaction();
-            $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->uid);
+            $userPayable = Yii::$app->account->getUserPayable(Yii::$app->user->uid);
             $trans = $payForm->getTrans();
 
             //如果账户余额大于交易的总金额，则直接支付
-            if ($userAccount->balance >= $trans->total_money) {
+            if ($userPayable->balance >= $trans->total_money) {
                 if (Yii::$app->account->pay($trans)) {
                     $transaction->commit();
                     //设置通知消息
@@ -257,37 +259,27 @@ class AccountController extends Controller
                     return false;
                 }
                 //交易状态需要变更为成功,对于充值型服务，不提供退款，此状态为最终状态
-                if ($trans->status >= Trans::PAY_STATUS_SUCCEEDED) {
-                    if ($trans->processPaySuccess($callback, $data)) {
-                        return true;
-                    }
-                    else {
-                        return false;
+                if ($trans->status !== Trans::PAY_STATUS_FINISHED) {
+                    $trans->status = Trans::PAY_STATUS_FINISHED;
+                    //如果交易存在关联交易，则出发关联交易的支付过程
+                    if ($trans->trans_id_ext) {
+                        $transExt = Trans::findOne($trans->trans_id_ext);
+                        if (Yii::$app->account->pay($transExt)) {
+                            return true;
+                        }
+                        else {
+                            return false;
+                        }
                     }
                 }
                 else {
                     return false;
-
                 }
             }
             else {
                 return false;
             }
         }
-    }
-
-    /**
-     * @brief 支付失败的回调方法,如果用户支付失败，本身没有回告，不做处理
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/20 11:44:28
-    **/
-    protected function processPayFailure($data) {
-
     }
 
 }

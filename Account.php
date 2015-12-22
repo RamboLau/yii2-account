@@ -3,6 +3,7 @@
 namespace lubaogui\account;
 
 use yii\helpers\ArrayHelper;
+use lubaogui\account\BaseAccount;
 use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
@@ -11,56 +12,13 @@ use lubaogui\payment\Payment;
 /**
  * 该类属于对账户所有对外接口操作的一个封装，账户的功能有充值，提现，担保交易，直付款交易等,账户操作中包含利润分账，但是分账最多支持2个用户分润
  */
-class Account extends Component 
+class Account extends BaseAccount 
 {
 
-    private $config;  
-
     /**
-     * @brief 
+     * @brief 用户直接购买另外一个用户的产品,controller用于构建trans, account完成最终的支付业务逻辑
      *
      * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/06 10:12:27
-     **/
-    public function init() {
-        $this->config = yii\helpers\ArrayHelper::merge(
-            require(__DIR__ . '/config/main.php'),
-            require(__DIR__ . '/config/main-local.php')
-        );
-    }
-
-    /**
-     * @brief 获取账户状态, 如果用户账户不存在，则自动为用户开通一个账号
-     *
-     * @return  object 用户账户对象 
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/06 17:59:27
-     **/
-    public function getUserAccount($uid) {
-        $userAccount = UserAccount::findOne($uid);
-        if (!$userAccount) {
-            $userAccount = new UserAccount();
-            $userAccount->uid = $uid;
-            $userAccount->balance = 0;
-            $userAccount->frozen_meony = 0;
-            $userAccount->deposit = 0;
-            $userAccount->currency = 1; //默认只支持人民币
-            $userAccount->save();
-        }
-        return  $userAccount;
-    }
-
-    /**
-     * @brief 用户直接购买另外一个用户的产品
-     *
-     * @return  public function 
-     * @retval   
      * @see 
      * @note 
      * @author 吕宝贵
@@ -69,40 +27,46 @@ class Account extends Component
     public function pay($trans) {
 
         //判断trans是否已经完成，如果已经完成，则不允许第二次支付
-
-        $buyerAccount = UserAccount::findOne($trans->from_uid);
+        $buyerAccount = $this->getUserAccount($trans->from_uid);
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
             //throw new Exception('非普通账号不支持直接交易!请联系管理员');
             return false;
         }
 
-        //直接支付交易
-        if ($trans->pay_mode == Trans::PAY_MODE_DIRECTPAY) {
-            //提交给账户进行扣款,账单，账户变化都进行更新,对于买家，扣除total_money
-            if (!$buyerAccount->minus($trans->total_money)) {
-                return false;
-            }
+        //不论哪种交易模式，首先从用户账户扣款，扣款成功才有后续动作
+        if (!$buyerAccount->minus($trans->total_money)) {
+            return false;
+        }
 
-            //完成交易的后续操作，如扣费等
-            if (!$this->finishPayTrans($trans)) {
+        //直接支付交易,从购买者账号中直接扣款
+        if ($trans->pay_mode == Trans::PAY_MODE_DIRECTPAY) {
+
+            //finishPayTrans主要完成交易的后续操作，如打款给卖家，收取手续费等
+            if ($this->finishPayTrans($trans)) {
+                return true;
+            }
+            else {
                 return false;
             }
         }
 
-        //担保支付交易操作
+        //担保支付情况，需要将款项在用户扣款成功之后支付给中间账号
         if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
-            //资金打入到担保账号
-            $vouchAccount = UserAccount::findOne($vouchAccountId);
+            $vouchAccount = $this->getUserAccount($vouchAccountId);
             if (!$vouchAccount->plus($money)) {
                 return false;
             }
 
             //变更交易状态
             $trans->status = Trans::PAY_STATUS_SUCCEEDED;
-            $trans->save();
+            if ($trans->save()) {
+                return true;
+            }
+            else {
+                return false;
+            }
         }
 
-        return $trans->id;
     }
 
     /**
@@ -118,7 +82,6 @@ class Account extends Component
     public function confirmVouchPay($transId) {
         $trans = Trans::findOne($transId);
         if ($trans->pay_mode != Trans::PAY_MODE_VOUCHPAY) {
-            throw new Exception('非担保交易无须确认');
             return false;
         }
 
@@ -128,60 +91,19 @@ class Account extends Component
             return false;
         }
 
-        //完成交易的后续操作
-        if (!$this->finishPay($trans)) {
+        //完成交易的后续操作,是在扣款成功之后或者从担保账号中转出款项之后进行的操作
+        if (!$this->finishPayTrans($trans)) {
             return false;
         }
 
         //变更交易状态
         $trans->status = Trans::PAY_STATUS_FINISHED;
-        $trans->save();
-
-        return true;
-    }
-
-    /**
-     * @brief 每个交易最后确认交易完成时所进行的操作，主要为打款给目的用户，分润，收取管理费等
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/06 17:31:52
-     **/
-    protected function finishPay($trans) {
-
-        //收款账户处理逻辑
-        $sellerAccount = UserAccount::findOne($trans->to_uid);
-        if (!$sellerAccount->plus($money)) {
+        if ($trans->save()) {
+            return true;
+        }
+        else {
             return false;
         }
-
-        //分润账号处理逻辑
-        if ($trans->profit > 0) {
-            $this->profit('pay', $trans_profit, '账号利润');
-        }
-
-        //手续费逻辑处理
-        if ($trans->fee > 0) {
-            $this->fee('pay', $fee, '支付手续费');
-        }
-
-    }
-
-    /**
-     * @brief 完成交易退款,该函数主要完成多种退款流程最后的利润退款，手续费退款等
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/06 18:02:59
-     **/
-    protected function finishRefund($transId) {
-
     }
 
     /**
@@ -197,59 +119,54 @@ class Account extends Component
     public function refundTrans($transId) {
 
         $trans = Trans::findOne($transId);
+        if (empty($trans)) {
+            //此处可记录错误日志,或者写错误信息
+            Yii::$app->warning('没有此交易记录');
+            return false;
+        }
 
         //仅用户之间的交易支持退款
         if ($trans->type != Trans::TRANS_TYPE_TRADE) {
-            throw new Exception('仅用户之间的交易支持退款');
+            Yii::$app->warning('仅用户之间的交易支持退款');
+            return false;
         }
 
         //如果已经在走退款流程，则直接抛出异常
         if ($trans->status === Trans::PAY_STATUS_REFUNDED) {
-            throw new Exception('退款已在进行中，或者已完成退款');
+            Yii::$app->warning('退款已在进行中，或者已完成退款');
         }
 
-        //担保交易未确定付款的交易，从中间账号返回给购买用户
-        if ($trans->status === Trans::PAY_STATUS_SUCCEEDED) {
-            //获取担保账号
+        //根据交易的不同状态进行退款
+        switch ($trans->status) {
+        case Trans::PAY_STATUS_SUCCEEDED : {
+            //从担保账号中退款,由于交易没有达成，分润也没有做，直接退款即可
             $vouchAccount = UserAccount::findOne($vouchAccountId);
-
-            //担保账号将款项退给用户
             if (!$vouchAccount->minus($money)) {
                 return false;
             }
+            break;
         }
-
-        //如果交易双方都已经收到款项，则从付款方账户中扣减
-        if ($trans->status === Trans::PAY_STATUS_FINISHED) {
-            //获取担保账号
+        case Trans::PAY_STATUS_FINISHED : {
+            //获取卖家账号，并退款
             $sellerAccount = UserAccount::findOne($vouchAccountId);
-
-            //担保账号退款
             if (!$sellerAccount->minus($money)) {
                 return false;
             }
-
-            //利润账号退款
-
-
-            //手续费账号退款,手续费是否可以退款，需要由产品流程来判断
-
-
-            //分润账号退款
-
-
+            break;
+        }
+        default: {
+            return false;
+        }
         }
 
-        //退款是否收取手续费,可以在这里做逻辑判断
-        $buyerAccount = UserAccount::findOne($trans->from_uid); 
-        if (!$buyerAccount->plus($trans->money)) {
+        //对于finishRefundTrans,需要区分交易状态，SUCCEEDED状态只返还用户钱款即可，FINISHED状态需要退利润等
+        if ($this->finishRefundTrans($trans)) {
+            return true;
+        }
+        else {
             return false;
         }
 
-        $trans->status = Trans::PAY_STATUS_REFUNDED;
-        $trans->save();
-
-        return true;
     }
 
     /**
@@ -262,13 +179,14 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/11/30 10:32:54
      **/
-    public function transferToAccount($transParams) {
+    public function transfer($transParams) {
 
 
     }
 
     /**
-     * @brief 用户提现，提现只能提取balance中的额度，保证金无法提取,该方法完成实际的提现操作
+     * @brief 用户提现，提现只能提取balance中的额度，保证金无法提取,该方法完成实际的提现操作,实际需要WithdrawForm
+     * 来产生trans
      *
      * @return  public function 
      * @retval   
@@ -277,25 +195,27 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/12/06 17:44:54
      **/
-    public function withdraw($params) {
+    public function withdraw($trans) {
 
-        $trans = new Trans();
-        $trans->load($params, '');
-        $trans->save();
-
-
-        $withdrawUser = UserAccount::findOne($trans->from_uid);
+        $withdrawUser = $this->getUserAccount($trans->from_uid);
         if ($money > $withdrawUser->balance) {
             return false;
         }
 
         //创建付款记录
+        //Todo: 补全相关信息
         $payable = new Payable();
         $payable->money = $trans->money;
         $payable->status = 1;
-        $payable->save();
+        if (!$payable->save()) {
+            return false;
+        }
 
-        $withdrawUser->freeze($trans->money);
+        //创建冻结记录，冻结的意思是该笔款项在途，无法使用,提现申请审核中可以取消提现，提现中状态无法取消
+        if (!$withdrawUser->freeze($trans->money)) {
+            return false;
+        }
+        return true;
 
     }
 
@@ -316,18 +236,21 @@ class Account extends Component
         //完成冻结，将款项从冻结中减除
         $withdrawUser->finishFreeze();
         $payable->status = Payable::PAY_STATUS_SUCCEEDED;
-        $payable->save();
+        if (!$payable->save()) {
+            return false;
+        }
         $trans = Trans::findOne($payable->trans_id);
         $trans->status = Trans::PAY_STATUS_FINISHED;
-        $trans->save();
-
-        return true;
+        if ($trans->save()) {
+            //回调函数，主要在action层填写，记录订单的信息更新等,如果是SOA服务，此操作会触发发送一条成功消息
+            call_user_func($callback, $data);  
+            return true;
+        }
 
     }
 
     /**
-     * @brief 用户充值,该操作仅生成充值记录,具体的支付需要通过payment完成,充值有两种模式，用户直接充值和订单产生
-     * 的充值，对于订单产生的充值，充值完成之后需要完成订单的业务逻辑
+     * @brief 
      *
      * @return  返回用户信息 
      * @retval   
@@ -336,7 +259,7 @@ class Account extends Component
      * @author 吕宝贵
      * @date 2015/12/06 17:49:22
      **/
-    public function directCharge($params) {
+    public function generateReceivable($trans) {
 
         //新建交易
         $trans = new Trans();
@@ -355,12 +278,10 @@ class Account extends Component
     }
 
     /**
-     * @brief 用户由于购买订单而产生充值行为，这种行为需要有两个
-     * 的充值，对于订单产生的充值，充值完成之后需要完成订单的业务逻辑
+     * @brief 用于产生用户充值的充值请求记录,在action中判断是否需要充值，如果需要，在此计算充值请求的具体内容
      *
      * @param array 交易的相关信息，以及订单支付的总金额, 充值的金额都需要在此列出
-     * @return  返回用户信息 
-     * @retval   
+     * @return Receivable 代收款记录信息
      * @see 
      * @note 
      * @author 吕宝贵
@@ -371,6 +292,7 @@ class Account extends Component
         $transCharge = new Trans();
         $transCharge->load($paramsCharge, '');
         $transCharge->trans_id_ext = $trans->id;
+        $transCharge-> = Trans::PAY_MODE_CHARGE;
 
         //新建收款记录
         $receivable = new  Receivable();
@@ -429,46 +351,6 @@ class Account extends Component
         }
 
         return true;
-    }
-
-    /**
-     * @brief 
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/05 12:45:03
-     **/
-    protected function profit($action, $money, $reason) {
-        $profitAccount = UserAccount::findOne($globalProfitAccountId);
-        switch $action {
-
-        case 'pay': {
-            $profitAccount->plus($money, $reason);
-            break;
-        }
-        case 'refund': {
-            $profitAccount->minus($money, $reason);
-            break;
-        }
-        default:break;
-        }
-    }
-
-    /**
-     * @brief 
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/05 12:45:52
-     **/
-    protected function fee($action, $money, $reason) {
-
     }
 
 }

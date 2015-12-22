@@ -77,6 +77,63 @@ class Trans extends ActiveRecord
     }
 
     /**
+     * @brief trans处理第三方支付成功
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/22 19:04:41
+    **/
+    public function processPaySuccess() {
+        
+
+    }
+
+    /**
+     * @brief trans支付成功并结算完成
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/22 19:04:41
+    **/
+    public function processPayFinish() {
+
+    }
+
+    /**
+     * @brief 进入退款中之后trans需要做的对应的操作
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/22 19:10:11
+    **/
+    public function refunding() {
+
+    }
+
+    /**
+     * @brief 退款完成之后对应的处理,需要对订单进行回写
+     *
+     * @return  public function 
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/22 19:10:26
+    **/
+    public function processRefundPayFinish() {
+
+
+    }
+
+    /**
      * @brief 获取一个trans_id对应的所有账单
      *
      * @return  public function 
