@@ -96,20 +96,14 @@ class AccountController extends Controller
 
             $trans = $chargeForm->getTrans();
             //生成提交给支付模块的待付款记录
-            $receivable = new Receivable();
-            $receivable->trans_id = $trans->id;
-            $receivable->channel_id = $chargeForm->channel_id;
-            $receivable->money = $trans->total_money;
-            if ($receivable->save()) {
-                $transaction->commit();
-            }
-            else {
+            if (!$receivable = Yii::$app->account->generateReceivable($trans)) {
                 $transaction->rollback();
-                throw new Exception('支付记录创建失败');
+                throw new Exception('产生收款记录失败');
             }
+            $transaction->commit();
 
             //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
-            $payChannel = PayChannel::findOne($$chargeForm->channel_id);
+            $payChannel = PayChannel::findOne($chargeForm->channel_id);
             $payment = new Payment($payChannel->alias); 
             $returnType = null;
             if ($payChannel->alias == 'wechatpay') {
@@ -162,9 +156,14 @@ class AccountController extends Controller
             }
             else {
 
-                $transaction = $this->beginTransaction();
-                $receivable = Yii::$app->account->chargeForTrans($trans);
-                //如果账户余额不足，则根据$receivable的金额去充值,
+                if (! $receivable = Yii::$app->account->generateReceivableAndChargeTrans($trans, $userAccount)) {
+                    $transaction->rollback();
+                    throw new Exception('生成充值订单出错');
+                }
+                else {
+                    $transaction->commit();
+                }
+                
                 //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
                 $payment = new Payment();
                 $payChannel = PayChannel::findOne($payForm->channel_id);

@@ -249,34 +249,32 @@ class Account extends BaseAccount
 
     }
 
+
     /**
-     * @brief 
+     * @brief 根据交易记录产生收款记录
      *
-     * @return  返回用户信息 
+     * @return  public function 
      * @retval   
      * @see 
      * @note 
      * @author 吕宝贵
-     * @date 2015/12/06 17:49:22
-     **/
+     * @date 2015/12/23 00:07:28
+    **/
     public function generateReceivable($trans) {
-
-        //新建交易
-        $trans = new Trans();
-        $trans->load($params, '');
-        $trans->status = Trans::PAY_STATUS_WAITPAY;
-        $trans->save();
-
         //新建收款记录
         $receivable = new  Receivable();
         $receivable->money = $trans->total_money;
+        $receivable->trans_id = $trans->id;
         $receivable->status = Receivable::PAY_STATUS_WAITPAY;
-        $receivable->save();
-
-        return $receivable;
-
+        //返回收款记录,用以跳转到第三方进行支付
+        if ($receivable->save()) {
+            return $receivable;
+        }
+        else {
+            return false;
+        }
     }
-
+ 
     /**
      * @brief 用于产生用户充值的充值请求记录,在action中判断是否需要充值，如果需要，在此计算充值请求的具体内容
      *
@@ -287,21 +285,18 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 17:49:22
      **/
-    public function chargeForTrans($trans) {
+    public function generateReceivableAndChargeTrans($trans, $userAccount) {
 
         $transCharge = new Trans();
-        $transCharge->load($paramsCharge, '');
         $transCharge->trans_id_ext = $trans->id;
-        $transCharge-> = Trans::PAY_MODE_CHARGE;
+        $transCharge->type = Trans::CHARGE;
+        $transCharge->total_money = $trans->total_money - $userAccount->balance;
 
-        //新建收款记录
-        $receivable = new  Receivable();
-        $receivable->money = $transCharge->total_money;
-        $receivable->trans_id = $transCharge->id;
-        $receivable->status = Receivable::PAY_STATUS_WAITPAY;
-        $receivable->save();
-
-        return $receivable;
+        if (! $transCharge->save()) {
+            return false;
+        }
+ 
+        return $this->generateReceivable($transCharge);
 
     }
 
@@ -316,7 +311,7 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 21:14:32
      **/
-    public function chargePaySucceeded($receivableId, $callback) {
+    public function chargePaySucceeded($trans) {
 
         $receivable = Receivable::findOne($receivableId);
         $receivable->status = Receivable::PAY_STATUS_FINISHED;

@@ -59,18 +59,4 @@ class ChargeForm extends Model
         return $trans;
     }
 
-    /**
-     * @brief 跳转到第三方支付页面,如果是微信支付，直接产生微信支付页面并返回,如果不需要支付，直接返回成功
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/14 16:14:50
-    **/
-    public function gotoPay($receivable) {
-
-    }
-
 }
