@@ -304,8 +304,7 @@ class Account extends BaseAccount
      * @brief 充值成功处理,第三方的只有充值成功通知,在支持成功之后的业务逻辑处理，支付宝和微信的所有回告都应该是充值接口
      *
      * @param string $callback 回调函数，仅仅对需要对订单进行逻辑处理的操作有效，需要添加订单id为参数
-     * @return  protected function 
-     * @retval   
+     * @return Trans object 返回充值支付的交易记录 
      * @see 
      * @note 
      * @author 吕宝贵
@@ -314,41 +313,30 @@ class Account extends BaseAccount
     public function processChargePaySuccess($receivable) {
 
         $receivable->status = Receivable::PAY_STATUS_FINISHED;
-        $receivable->save();
+        if (!$receivable->save()) {
+            return false;
+        }
 
         //获取交易记录
         $trans = Trans::findOne($receivable->trans_id);
+        if (!$trans) {
+            return false;
+        }
 
         //充值型trans，直接成功,设置交易信息
         $trans->status = Trans::PAY_STATUS_FINISHED;
-        $userAccount = UserAccount::findOne($trans->uid);
-
-        //为用户账户充值
-        $userAccount->plus($trans->total_money, '账户充值');
-
-        //交易成功之后，需要根据trans是否有关联的trans_id来判断是否进行订单交易处理
-        if ($trans->trans_id_ext) {
-            $transOrder = Trans::findOne($trans->trans_id_ext);
-            switch  ($transOrder->type) {
-            case Trans::PAY_MODE_DIRECTPAY: {
-                if (!$this->directPay($transOrder)) {
-                    return false;
-                }
-                break;
-            }
-            case Trans::PAY_MODE_VOUCHPAY: {
-                if (!$this->vouchPay($transOrder)) {
-                    return false;
-                }
-                break;
-            }
-            default:break;
-            }
-            //回调订单处理函数
-            call_user_func([$callback, $transOrder->trans_ext_id]);
+        if (!$trans->save()) {
+            return false;
         }
 
-        return true;
+        //为用户账户充值,充值成功即为一个事物，后续的购买判断在controller里面完成
+        $userAccount = $this->getUserAccount($trans->to_uid);
+        if (!$userAccount->plus($trans->total_money, '账户充值')) {
+            return false;
+        }
+
+        return $trans;
+
     }
 
 }

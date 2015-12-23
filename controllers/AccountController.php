@@ -209,8 +209,8 @@ class AccountController extends Controller
         //根据回调地址，确定支付通知来源
 
         $handlers = [
-            'paySuccessHandler'=>[$this, 'processPaySuccess'],
-            'payFailHandler'=>[$this, 'processPayFailure'],
+            'paySuccessHandler'=>[Yii::$app->account, 'processChargePaySuccess'],
+            'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
             ];
 
         $transaction = $this->beginTransaction();
@@ -218,8 +218,28 @@ class AccountController extends Controller
 
         //业务逻辑都在handlers中实现
         try {
-            if ($payment->processNotify()) {
+            $trans = null;
+            if ($trans = $payment->processNotify()) {
                 $transaction->commit();
+                //上面是用户充值成功逻辑，如果交易存在关联的交易，则查询关联交易的信息，并尝试支付
+                if ($trans->trans_id_ext) {
+                    $transOrder = Trans::findOne($trans->trans_id_ext);
+                    if (!$transOrder) {
+                        return false;
+                    }
+                    $transaction = $this->beginTransaction();
+                    if (Yii::$app->pay($transOrder)) {
+                        $transaction->commit();
+                        //页面跳转逻辑
+                    }
+                    else {
+                        $transaction->rollback();
+                        //页面跳转逻辑
+                    }
+                }
+                else {
+                    //成功页面跳转逻辑
+                }
             }
             else {
                 $transaction->rollback();
@@ -229,64 +249,6 @@ class AccountController extends Controller
             throw new Exception($e->getMessage());
         }
         
-    }
-
-
-    /**
-     * @brief 支付成功的回调方法
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/20 11:44:17
-    **/
-    protected function processPaySuccess($data) {
-        //用户支付成功
-        $receivable = Receivable::findOne(['id'=>$data['receivable_id']]);
-        if ($receivable->status === Receivable::PAY_STATUS_FINISHED) {
-            return false;
-        }
-        else {
-            //代收款的成功处理逻辑
-            if ($receivable->paySuccess()) {
-                $trans = Trans::findOne($receivable->trans_id);
-                if (empty($trans)) {
-                    return false;
-                }
-                //交易状态需要变更为成功,对于充值型服务，不提供退款，此状态为最终状态
-                if ($trans->status >= Trans::PAY_STATUS_SUCCEEDED) {
-                    if ($trans->processPaySuccess($callback, $data)) {
-                        return true;
-                    }
-                    else {
-                        return false;
-                    }
-                }
-                else {
-                    return false;
-
-                }
-            }
-            else {
-                return false;
-            }
-        }
-    }
-
-    /**
-     * @brief 支付失败的回调方法,如果用户支付失败，本身没有回告，不做处理
-     *
-     * @return  protected function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/20 11:44:28
-    **/
-    protected function processPayFailure($data) {
-
     }
 
 }
