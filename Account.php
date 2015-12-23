@@ -229,7 +229,7 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 20:31:42
      **/
-    public function withdrawPaySucceeded($payId, $callback) {
+    public function processWithdrawPaySuccess($payId, $callback) {
 
         $payable = Payable::findOne($payId); 
         $withdrawUser = UserAccount::findOne($payable->to_uid);
@@ -301,7 +301,7 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 支付成功处理,在支持成功之后的业务逻辑处理，支付宝和微信的所有回告都应该是充值接口
+     * @brief 充值成功处理,第三方的只有充值成功通知,在支持成功之后的业务逻辑处理，支付宝和微信的所有回告都应该是充值接口
      *
      * @param string $callback 回调函数，仅仅对需要对订单进行逻辑处理的操作有效，需要添加订单id为参数
      * @return  protected function 
@@ -311,15 +311,18 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 21:14:32
      **/
-    public function chargePaySucceeded($trans) {
+    public function processChargePaySuccess($receivable) {
 
-        $receivable = Receivable::findOne($receivableId);
         $receivable->status = Receivable::PAY_STATUS_FINISHED;
         $receivable->save();
+
+        //获取交易记录
         $trans = Trans::findOne($receivable->trans_id);
-        //充值型trans，直接成功
+
+        //充值型trans，直接成功,设置交易信息
         $trans->status = Trans::PAY_STATUS_FINISHED;
         $userAccount = UserAccount::findOne($trans->uid);
+
         //为用户账户充值
         $userAccount->plus($trans->total_money, '账户充值');
 
