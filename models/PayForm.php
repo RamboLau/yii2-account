@@ -49,21 +49,20 @@ class PayForm extends Model
     **/
     public function generateTrans() {
 
-        $product = Product::findOne(['pid'=>$booking->product_id]);
-
-        $buyerAccount = UserAccount::findOne(Yii::$app->user->identity['uid']);
+        $product = Product::findOne(['pid'=>$this->booking->pid]);
+        $buyerAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity['uid']);
 
         //根据booking_id生成交易记录
         $trans = new Trans();
-        $trans->pay_mode = $product->pay_mode;
-        $trans->trans_type_id = $product->pay_mode;
-        $trans->total_money = $booking->total_money;
-        $trans->profit = $booking->profit;
-        $trans->earnest_money = $booking->earnest_money;
+        $trans->pay_mode = Trans::PAY_MODE_VOUCHPAY;
+        $trans->trans_type_id = Trans::TRANS_TYPE_PAY;
+        $trans->total_money = $this->booking->price_final;
+        $trans->profit = $this->booking->price_sale_profit;
+        //$trans->earnest_money = $booking->earnest_money;
         $trans->trans_id_ext = $this->booking_id;
-        $trans->from_uid = Yii::$app->user->identity['uid'];
-        $trans->from_uid = $product->uid;
-        $trans->status = 1; //1为等待支付状态
+        $trans->from_uid = $buyerAccount->uid;;
+        $trans->to_uid = $this->booking->hug_uid;
+        $trans->status = Trans::PAY_STATUS_WAITPAY; //1为等待支付状态
         if ($trans->save()) {
             return $trans;
         }
@@ -91,24 +90,10 @@ class PayForm extends Model
             return false;
         }
 
-        if (empty($booking->trans_id)) {
+        if (empty($this->booking->trans_id)) {
             $this->trans = $this->generateTrans();
         }
         return $this->trans;
-    }
-
-    /**
-     * @brief 跳转到第三方支付页面,如果是微信支付，直接产生微信支付页面并返回,如果不需要支付，直接返回成功
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/14 16:14:50
-    **/
-    public function gotoPay($receivable) {
-
     }
 
 }

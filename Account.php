@@ -289,7 +289,7 @@ class Account extends BaseAccount
 
         $transCharge = new Trans();
         $transCharge->trans_id_ext = $trans->id;
-        $transCharge->type = Trans::CHARGE;
+        $transCharge->type = Trans::TRANS_TYPE_CHARGE;
         $transCharge->total_money = $trans->total_money - $userAccount->balance;
 
         if (! $transCharge->save()) {
