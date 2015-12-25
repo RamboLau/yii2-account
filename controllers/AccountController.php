@@ -35,8 +35,8 @@ class AccountController extends Controller
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [
-                    'charge' => ['post'],
-                    'pay' => ['post'],
+                    'charge' => ['post', 'get'],
+                    'pay' => ['post', 'get'],
                 ],
             ],
         ];
@@ -60,7 +60,7 @@ class AccountController extends Controller
 
 
     /**
-     * @brief 返回账户详细信息，该操作用户必须登录
+     * @brief 返回当前登录账户详细信息，该操作用户必须登录
      *
      * @return  public function 
      * @retval   
@@ -71,7 +71,7 @@ class AccountController extends Controller
     **/
     public function actionDetail() {
 
-        $userAccount = UserAccount::find()->select(['uid', 'currency', 'balance', 'frozon_money' ])->where(['uid'=>Yii::$app->user->identity['uid']]);
+        $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity['uid']);
         return $userAccount;
 
     }
@@ -109,6 +109,7 @@ class AccountController extends Controller
             if ($payChannel->alias == 'wechatpay') {
                 $returnType = 'QRCodeUrl';
             }
+            //返回需要跳转到页面url或者二维码图片
             $payment->gotoPay($receivable, $returnType);
         }
         else {
@@ -206,8 +207,7 @@ class AccountController extends Controller
         $payChannelId = Yii::$app->request->get('channel_id');
 
         $payment = new Payment($channels[$payChannelId]['alias']);
-        //根据回调地址，确定支付通知来源
-
+        //设置支付的成功和失败回调函数
         $handlers = [
             'paySuccessHandler'=>[Yii::$app->account, 'processChargePaySuccess'],
             'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
