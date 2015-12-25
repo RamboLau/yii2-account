@@ -91,7 +91,7 @@ class AccountController extends Controller
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $chargeForm = new $ChargeForm();
         $postParams = Yii::$app->request->post();
-        $transaction = Yii::$app->beginTransaction();
+        $transaction = Yii::$app->db->beginTransaction();
         if ($chargeForm->load($postParams, '') && $chargeForm->generateTrans()) {
 
             $trans = $chargeForm->getTrans();
@@ -137,7 +137,7 @@ class AccountController extends Controller
         if ($payForm->load(Yii::$app->request->post())) {
 
             //根据form产生trans,trans处于未支付状态
-            $transaction = Yii::$app->beginTransaction();
+            $transaction = Yii::$app->db->beginTransaction();
             $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->uid);
             $trans = $payForm->getTrans();
 
@@ -213,7 +213,7 @@ class AccountController extends Controller
             'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
             ];
 
-        $transaction = $this->beginTransaction();
+        $transaction = Yii::$app->db->beginTransaction();
         $payment->setHandlers($handlers);
 
         //业务逻辑都在handlers中实现
@@ -227,7 +227,7 @@ class AccountController extends Controller
                     if (!$transOrder) {
                         return false;
                     }
-                    $transaction = $this->beginTransaction();
+                    $transaction = Yii::$app->db->beginTransaction();
                     if (Yii::$app->pay($transOrder)) {
                         $transaction->commit();
                         //页面跳转逻辑
