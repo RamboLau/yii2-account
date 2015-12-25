@@ -7,7 +7,7 @@ create table `user_account` (
     `is_enabled` tinyint(1) unsigned not null default 0 comment '账号状态: 1 有效 2 异常封禁 0为非法值',
     `balance` decimal(16,2) not null default 0.00 comment '用户账户现金余额', 
     `deposit` decimal(16,2) not null default 0.00 comment '保证金', 
-    `frozon_money` decimal(16,2) not null default 0.00 comment '冻结资金', 
+    `frozen_money` decimal(16,2) not null default 0.00 comment '冻结资金', 
     `pay_password` varchar(64) not null default '' comment '支付密码',
     `last_balance_changed_ip` char(15) not null default '' comment '上次帐户余额更新ip',
     `last_balance_changed_at` char(12) not null default '' comment '上次帐户结余变更时间',

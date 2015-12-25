@@ -138,7 +138,7 @@ class AccountController extends Controller
 
             //根据form产生trans,trans处于未支付状态
             $transaction = Yii::$app->db->beginTransaction();
-            $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->uid);
+            $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity['uid']);
             $trans = $payForm->getTrans();
 
             //如果账户余额大于交易的总金额，则直接支付

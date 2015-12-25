@@ -27,7 +27,7 @@ class BaseAccount extends Component
      * @date 2015/12/06 10:12:27
      **/
     public function init() {
-        $this->config = yii\helpers\ArrayHelper::merge(
+        $this->config = ArrayHelper::merge(
             require(__DIR__ . '/config/main.php'),
             require(__DIR__ . '/config/main-local.php')
         );
@@ -43,13 +43,13 @@ class BaseAccount extends Component
      * @author 吕宝贵
      * @date 2015/12/06 17:59:27
      **/
-    protected function getUserAccount($uid) {
+    public function getUserAccount($uid) {
         $userAccount = UserAccount::findOne($uid);
         if (!$userAccount) {
             $userAccount = new UserAccount();
             $userAccount->uid = $uid;
             $userAccount->balance = 0;
-            $userAccount->frozen_meony = 0;
+            $userAccount->frozen_money = 0;
             $userAccount->deposit = 0;
             $userAccount->currency = 1; //默认只支持人民币
             if (!$userAccount->save()) {
@@ -128,7 +128,7 @@ class BaseAccount extends Component
      **/
     protected function processProfit($action, $money, $reason) {
         $profitAccount = UserAccount::findOne($globalProfitAccountId);
-        switch $action {
+        switch ($action) {
         case 'pay': {
             $profitAccount->plus($money, $reason);
             break;
