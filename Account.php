@@ -8,6 +8,7 @@ use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
 use lubaogui\payment\Payment;
+use lubaogui\payment\models\Receivable;
 
 /**
  * 该类属于对账户所有对外接口操作的一个封装，账户的功能有充值，提现，担保交易，直付款交易等,账户操作中包含利润分账，但是分账最多支持2个用户分润
@@ -289,7 +290,7 @@ class Account extends BaseAccount
 
         $transCharge = new Trans();
         $transCharge->trans_id_ext = $trans->id;
-        $transCharge->type = Trans::TRANS_TYPE_CHARGE;
+        $transCharge->trans_type_id = Trans::TRANS_TYPE_CHARGE;
         $transCharge->total_money = $trans->total_money - $userAccount->balance;
 
         if (! $transCharge->save()) {

@@ -6,6 +6,7 @@ use yii\base\InvalidParamException;
 use yii\web\Controller;
 use yii\filters\VerbFilter;                                
 use yii\filters\AccessControl;                                
+use lubaogui\payment\Payment; 
 use lubaogui\payment\models\PayChannel; 
 use common\models\Booking; 
 use lubaogui\account\models\UserAccount; 
