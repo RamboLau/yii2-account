@@ -15,6 +15,7 @@ class PayForm extends Model
 {
     //预订id
     public $booking_id;
+    public $channel_id;
 
     private $booking;
 
@@ -33,7 +34,8 @@ class PayForm extends Model
     public function rules()
     {
         return [
-            [['booking_id'], 'integer', 'required'],
+            [['booking_id'], 'required'],
+            [['channel_id'], 'safe'],
         ];
     }
 
@@ -58,7 +60,8 @@ class PayForm extends Model
         $trans->trans_type_id = Trans::TRANS_TYPE_PAY;
         $trans->total_money = $this->booking->price_final;
         $trans->profit = $this->booking->price_sale_profit;
-        //$trans->earnest_money = $booking->earnest_money;
+        //保证金，目前还没有上
+        //$trans->earnest_money = $this->booking->earnest_money;
         $trans->trans_id_ext = $this->booking_id;
         $trans->from_uid = $buyerAccount->uid;;
         $trans->to_uid = $this->booking->hug_uid;
