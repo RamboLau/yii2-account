@@ -82,7 +82,7 @@ class PayForm extends Model
      */
     public function getTrans()
     {
-        $this->booking = Booking::findOne(['bid'=>$this->booking_id, 'uid'=>Yii::$app->user->identity['uid']]);
+        $this->booking = Booking::findOne(['bid'=>$this->booking_id, 'q_uid'=>Yii::$app->user->identity['uid']]);
 
         if (empty($this->booking)) {
             return false;

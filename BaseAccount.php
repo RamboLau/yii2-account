@@ -2,6 +2,7 @@
 
 namespace lubaogui\account;
 
+use yii\base\Component;
 use yii\helpers\ArrayHelper;
 use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
