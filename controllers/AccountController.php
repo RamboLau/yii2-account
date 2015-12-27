@@ -238,11 +238,11 @@ class AccountController extends Controller
                 $transaction->commit();
                 //上面是用户充值成功逻辑，如果交易存在关联的交易，则查询关联交易的信息，并尝试支付
                 if ($trans->trans_id_ext) {
+                    $transaction = Yii::$app->db->beginTransaction();
                     $transOrder = Trans::findOne($trans->trans_id_ext);
                     if (!$transOrder) {
                         return false;
                     }
-                    $transaction = Yii::$app->db->beginTransaction();
                     if (Yii::$app->pay($transOrder)) {
                         $transaction->commit();
                         //页面跳转逻辑
