@@ -143,10 +143,11 @@ class AccountController extends Controller
             $trans = $payForm->getTrans();
 
             //如果账户余额大于交易的总金额，则直接支付
+            $callbackData = ['bid'=>$payForm->booking_id, 'trans_id'=>$trans->id];
             if ($userAccount->balance >= $trans->total_money) {
                 if (Yii::$app->account->pay($trans)) {
                     //回调预订中的成功支付函数
-                    if (call_user_func([Booking::className(), 'processPaySuccess'], $trans->id)) {
+                    if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
                         $transaction->commit();
                     }
                     else {
@@ -170,7 +171,7 @@ class AccountController extends Controller
                     throw new Exception('生成充值订单出错');
                 }
                 else {
-                    if (call_user_func([Booking::className(), 'processGenTransSuccess'], $trans->id)) {
+                    if (call_user_func([Booking::className(), 'processGenTransSuccess'], $callbackData)) {
                         $transaction->commit();
                     }
                     else {
