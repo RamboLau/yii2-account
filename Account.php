@@ -263,9 +263,16 @@ class Account extends BaseAccount
     **/
     public function generateReceivable($trans) {
         //新建收款记录
-        $receivable = new  Receivable();
+
+        $receivable = null;
+
+        if (! $receivable = Receivable::findOne(['trans_id'=>$trans->id])) {
+            $receivable = new  Receivable();
+        }
+
         $receivable->money = $trans->total_money;
         $receivable->trans_id = $trans->id;
+        $receivable->uid = $trans->from_uid;
         $receivable->status = Receivable::PAY_STATUS_WAITPAY;
         //返回收款记录,用以跳转到第三方进行支付
         if ($receivable->save()) {
@@ -288,9 +295,20 @@ class Account extends BaseAccount
      **/
     public function generateReceivableAndChargeTrans($trans, $userAccount) {
 
-        $transCharge = new Trans();
+
+        $transCharge = null;
+
+        //如果充值的交易已存在，则不再多余生成，复用充值交易
+        if (! $transCharge = Trans::find()->where(['trans_id_ext'=>$trans->id, 'trans_type_id'=>TRANS_TYPE_CHARGE])->one()) {
+            $transCharge = new Trans();
+        }
+
         $transCharge->trans_id_ext = $trans->id;
         $transCharge->trans_type_id = Trans::TRANS_TYPE_CHARGE;
+        $transCharge->from_uid = $trans->from_uid;
+        $transCharge->to_uid = $trans->to_uid;
+        //所有充值交易都为直接交易
+        $transCharge->pay_mode = Trans::PAY_MODE_DIRECTPAY;
         $transCharge->total_money = $trans->total_money - $userAccount->balance;
 
         if (! $transCharge->save()) {

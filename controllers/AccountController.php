@@ -145,7 +145,14 @@ class AccountController extends Controller
             //如果账户余额大于交易的总金额，则直接支付
             if ($userAccount->balance >= $trans->total_money) {
                 if (Yii::$app->account->pay($trans)) {
-                    $transaction->commit();
+                    //回调预订中的成功支付函数
+                    if (call_user_func([Booking::className(), 'processPaySuccess'], $trans->id)) {
+                        $transaction->commit();
+                    }
+                    else {
+                        $transaction->rollback();
+                        return false;
+                    }
                     //设置通知消息
                     Yii::$app->success('订单支付成功');
                     //跳转到订单支付成功页面
@@ -163,7 +170,13 @@ class AccountController extends Controller
                     throw new Exception('生成充值订单出错');
                 }
                 else {
-                    $transaction->commit();
+                    if (call_user_func([Booking::className(), 'processGenTransSuccess'], $trans->id)) {
+                        $transaction->commit();
+                    }
+                    else {
+                        $transaction->rollback();
+                        throw new Exception('生成支付信息出错');
+                    }
                 }
                 
                 //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出

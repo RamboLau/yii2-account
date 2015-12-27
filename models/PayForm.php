@@ -57,7 +57,7 @@ class PayForm extends Model
         //根据booking_id生成交易记录
         $trans = new Trans();
         $trans->pay_mode = Trans::PAY_MODE_VOUCHPAY;
-        $trans->trans_type_id = Trans::TRANS_TYPE_PAY;
+        $trans->trans_type_id = Trans::TRANS_TYPE_TRADE;
         $trans->total_money = $this->booking->price_final;
         $trans->profit = $this->booking->price_sale_profit;
         //保证金，目前还没有上
@@ -96,6 +96,10 @@ class PayForm extends Model
         if (empty($this->booking->trans_id)) {
             $this->trans = $this->generateTrans();
         }
+        else {
+            $this->trans = Trans::findOne($this->booking->trans_id);
+        }
+
         return $this->trans;
     }
 
