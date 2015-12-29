@@ -9,6 +9,8 @@ namespace lubaogui\account\models;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
+use lubaogui\account\models\Bill;
+use lubaogui\account\models\UserAccountLog;
  
  
 /**
@@ -111,16 +113,13 @@ class UserAccount extends ActiveRecord
             $bill = new Bill();
             $bill->uid = $this->uid;
             $bill->trans_id = $transId;
-            $bill->trans_type_id = $transId;
+            $bill->trans_type_id = $transTypeId;
             $bill->trans_type_name = $transTypeName;
             $bill->money = $money;
             $bill->balance_type = static::BALANCE_TYPE_PLUS;
             $bill->currency = $currency;
             $bill->description = $description;
-            if ($bill->save()) {
-                return true;
-            }
-            else {
+            if (! $bill->save()) {
                 return false;
             }
 
@@ -137,12 +136,10 @@ class UserAccount extends ActiveRecord
             $accountLog->trans_money = $money;
             $accountLog->trans_desc = $description;
 
-            if ($accountLog->save()) {
-                return true;
-            }
-            else {
+            if (! $accountLog->save()) {
                 return false;
             }
+            return true;
 
         }    
         else {

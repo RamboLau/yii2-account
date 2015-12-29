@@ -35,7 +35,7 @@ class Account extends BaseAccount
         }
 
         //不论哪种交易模式，首先从用户账户扣款，扣款成功才有后续动作
-        if (!$buyerAccount->minus($trans->total_money)) {
+        if (!$buyerAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '产品交易', '产品交易')) {
             return false;
         }
 
@@ -54,7 +54,7 @@ class Account extends BaseAccount
         //担保支付情况，需要将款项在用户扣款成功之后支付给中间账号
         if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
             $vouchAccount = $this->getUserAccount($vouchAccountId);
-            if (!$vouchAccount->plus($money)) {
+            if (!$vouchAccount->plus($money, $trans->id, $trans->trans_type_id, '交易', '担保交易')) {
                 return false;
             }
 
@@ -88,7 +88,7 @@ class Account extends BaseAccount
 
         //金额从担保账号转出
         $vouchAccount = UserAccount::findOne($vouchAccountId);
-        if (!$vouchAccount->minus($trans->total_money)) {
+        if (!$vouchAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '交易', '担保交易')) {
             return false;
         }
 
@@ -350,7 +350,7 @@ class Account extends BaseAccount
 
         //为用户账户充值,充值成功即为一个事物，后续的购买判断在controller里面完成
         $userAccount = $this->getUserAccount($trans->to_uid);
-        if (!$userAccount->plus($trans->total_money, '账户充值')) {
+        if (!$userAccount->plus($trans->total_money, $trans->id, $trans->trans_type_id, '充值', '账户充值')) {
             return false;
         }
 

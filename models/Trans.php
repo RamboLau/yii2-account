@@ -10,6 +10,8 @@ namespace lubaogui\account\models;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
+use lubaogui\account\models\Bill;
+use lubaogui\account\models\TransType;
  
  
 /**
@@ -140,7 +142,7 @@ class Trans extends ActiveRecord
      * @date 2015/11/30 16:50:53
     **/
     public function getBills() {
-        return $this->hasMany(Bills::className(), ['trans_id'=>'id']);
+        return $this->hasMany(Bill::className(), ['trans_id'=>'id']);
     }
 
     /**

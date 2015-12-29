@@ -10,6 +10,8 @@ namespace lubaogui\account\models;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
+use lubaogui\account\models\Trans;
+use lubaogui\account\models\TransType;
  
  
 /**

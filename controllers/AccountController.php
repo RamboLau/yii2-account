@@ -110,8 +110,10 @@ class AccountController extends Controller
             if ($payChannel->alias == 'wechatpay') {
                 $returnType = 'QRCodeUrl';
             }
-            //返回需要跳转到页面url或者二维码图片
-            $payment->gotoPay($receivable, $returnType);
+            //返回需要跳转到页面url或者二维码图片, 如果返回flase，则报错
+            if (! $payment->gotoPay($receivable, $returnType)) {
+                throw new Exception('无法产生支付信息，订单或已支付');
+            }
         }
         else {
             return $this->render('charge',[
@@ -229,12 +231,11 @@ class AccountController extends Controller
             ];
 
         $transaction = Yii::$app->db->beginTransaction();
-        $payment->setHandlers($handlers);
 
         //业务逻辑都在handlers中实现
         try {
             $trans = null;
-            if ($trans = $payment->processNotify()) {
+            if ($trans = $payment->processNotify($handlers)) {
                 $transaction->commit();
                 //上面是用户充值成功逻辑，如果交易存在关联的交易，则查询关联交易的信息，并尝试支付
                 if ($trans->trans_id_ext) {
@@ -243,7 +244,7 @@ class AccountController extends Controller
                     if (!$transOrder) {
                         return false;
                     }
-                    if (Yii::$app->pay($transOrder)) {
+                    if (Yii::$app->account->pay($transOrder)) {
                         $transaction->commit();
                         //页面跳转逻辑
                     }

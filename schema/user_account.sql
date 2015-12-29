@@ -93,6 +93,7 @@ create table `trans_log` (
     `op_id` bigint unsigned not null default 1 comment '操作人员id',
     `memo` varchar(24)  not null default '' comment '备注',
     `created_at` int(10) not null default 0 comment '记录创建时间'
+    `updated_at` int(10) not null default 0 comment '记录更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易日志表';
 
 drop table if exists `bill`;
@@ -107,6 +108,7 @@ create table `bill` (
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币',
     `description` varchar(32) not null default '' comment '账单描述',
     `created_at` int(10) not null default 0 comment '创建时间',
+    `updated_at` int(10) not null default 0 comment '更新时间',
     key uidx_uid_trans (`uid`, `balance_type`),
     key uidx_uid_trans_tt (`uid`, `trans_type_id`, `balance_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='账单表';
