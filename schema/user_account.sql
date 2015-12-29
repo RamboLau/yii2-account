@@ -25,10 +25,12 @@ create table `user_account_log` (
     `trans_id` bigint unsigned not null comment '和变动关联的交易单号',
     `balance` decimal(16,2) not null default 0.00 comment '用户账户剩余资金', 
     `deposit` decimal(16,2) not null default 0.00 comment '用户冻结资金', 
+    `frozen_money` decimal(16,2) not null default 0.00 comment '冻结资金', 
     `balance_type` tinyint(1) unsigned not null default 1 comment '变动方向 1 账户金额增加 2 账户余额减少 其他非法',
-    `tans_money` decimal(16,2) not null default 0.00 comment '变动金额',
-    `tans_desc` varchar(64) not null default '' comment '变动描述',
+    `trans_money` decimal(16,2) not null default 0.00 comment '变动金额',
+    `trans_desc` varchar(64) not null default '' comment '变动描述',
     `created_at` int(10) unsigned not null default 0 comment '资金流动行为产生时间',
+    `updated_at` int(10) unsigned not null default 0 comment '最后更新时间',
     key uidx_uid_actype (`uid`, `account_type`, `currency`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户账户历史表';
 
@@ -85,7 +87,7 @@ create table `trans` (
 
 drop table if exists `trans_log`;
 create table `trans_log` (
-    `id` int primary key not null comment '自增id',
+    `id` int primary key not null auto_increment comment '自增id',
     `trans_id` bigint unsigned not null comment '交易id,此交易号对平台唯一',
     `action` varchar(12)  not null default '' comment '动作',
     `money` decimal(9,2) not null default 0.00 comment '交易金额',  
@@ -98,7 +100,7 @@ create table `trans_log` (
 
 drop table if exists `bill`;
 create table `bill` (
-    `id` bigint primary key not null comment '自增id',
+    `id` bigint primary key not null auto_increment comment '自增id',
     `uid` bigint(20) unsigned not null default 0 comment '用户id',
     `trans_id` bigint unsigned not null comment '账单来源交易id',
     `trans_type_id` smallint unsigned not null comment '账单来源交易类型',
@@ -116,7 +118,7 @@ create table `bill` (
 
 drop table if exists `freeze`;
 create table `freeze` (
-    `id` bigint primary key not null comment '自增id',
+    `id` bigint primary key not null auto_increment comment '自增id',
     `freeze_type` smallint unsigned not null default 1 comment '冻结类型: 1 提现',
     `status` tinyint(1) not null default 0 comment '账号使用状态: 1 冻结中 2 已完成交易 3 交易失败已返还原账户',
     `uid` bigint(20) unsigned not null default 0 comment '用户id',

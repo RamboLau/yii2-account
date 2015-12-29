@@ -81,7 +81,7 @@ class UserAccountLog extends ActiveRecord
      * @date 2015/12/17 20:38:48
     **/
     public function getTransType() {
-        return $this->hasOne(TransType::className(), ['id'=>'trans_type_id'];
+        return $this->hasOne(TransType::className(), ['id'=>'trans_type_id']);
     }
 
 }

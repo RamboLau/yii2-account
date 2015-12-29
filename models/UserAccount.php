@@ -126,12 +126,11 @@ class UserAccount extends ActiveRecord
             //账户快照产生
             $accountLog = new UserAccountLog();
             $accountLog->uid = $this->uid;
-            $accountLog->account_type = $this->account_type;
+            $accountLog->account_type = $this->type;
             $accountLog->currency = $currency;
             $accountLog->balance = $this->balance;
             $accountLog->deposit = $this->deposit;
             $accountLog->frozen_money = $this->frozen_money;
-            $accountLog->descrption = $this->dsctcrption;
             $accountLog->balance_type = static::BALANCE_TYPE_PLUS;
             $accountLog->trans_money = $money;
             $accountLog->trans_desc = $description;
@@ -166,7 +165,7 @@ class UserAccount extends ActiveRecord
             $bill = new Bill();
             $bill->uid = $this->uid;
             $bill->trans_id = $transId;
-            $bill->trans_type_id = $transId;
+            $bill->trans_type_id = $transTypeId;
             $bill->trans_type_name = $transTypeName;
             $bill->money = $money;
             $bill->balance_type = static::BALANCE_TYPE_MINUS;
@@ -187,7 +186,6 @@ class UserAccount extends ActiveRecord
             $accountLog->balance = $this->balance;
             $accountLog->deposit = $this->deposit;
             $accountLog->frozen_money = $this->frozen_money;
-            $accountLog->descrption = $this->dsctcrption;
             $accountLog->balance_type = static::BALANCE_TYPE_MINUS;
             $accountLog->trans_money = $money;
             $accountLog->trans_desc = $description;

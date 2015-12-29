@@ -2,14 +2,14 @@
 namespace frontend\controllers;
 
 use Yii;
-use yii\base\InvalidParamException;                                
+use yii\base\InvalidParamException;
 use yii\web\Controller;
-use yii\filters\VerbFilter;                                
-use yii\filters\AccessControl;                                
-use lubaogui\payment\Payment; 
-use lubaogui\payment\models\PayChannel; 
-use common\models\Booking; 
-use lubaogui\account\models\UserAccount; 
+use yii\filters\VerbFilter;
+use yii\filters\AccessControl;
+use lubaogui\payment\Payment;
+use lubaogui\payment\models\PayChannel;
+use common\models\Booking;
+use lubaogui\account\models\UserAccount;
 use frontend\models\PayForm;
 
 /**
@@ -63,10 +63,10 @@ class AccountController extends Controller
     /**
      * @brief 返回当前登录账户详细信息，该操作用户必须登录
      *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
+     * @return  public function
+     * @retval
+     * @see
+     * @note
      * @author 吕宝贵
      * @date 2015/12/20 19:53:21
     **/
@@ -80,10 +80,10 @@ class AccountController extends Controller
     /**
      * @brief 用户直接充值页面操作
      *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
+     * @return  public function
+     * @retval
+     * @see
+     * @note
      * @author 吕宝贵
      * @date 2015/12/08 22:35:12
     **/
@@ -105,7 +105,7 @@ class AccountController extends Controller
 
             //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
             $payChannel = PayChannel::findOne($chargeForm->channel_id);
-            $payment = new Payment($payChannel->alias); 
+            $payment = new Payment($payChannel->alias);
             $returnType = null;
             if ($payChannel->alias == 'wechatpay') {
                 $returnType = 'QRCodeUrl';
@@ -120,16 +120,16 @@ class AccountController extends Controller
                 'model' => $chargeForm,
                 'channels'=>$channels,
             ]);
-        } 
+        }
     }
 
     /**
      * @brief 担保交易支付,支付的时候，需要判断是否需要用户充值完成支付
      *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
+     * @return  public function
+     * @retval
+     * @see
+     * @note
      * @author 吕宝贵
      * @date 2015/12/08 22:35:00
     **/
@@ -142,7 +142,13 @@ class AccountController extends Controller
             //根据form产生trans,trans处于未支付状态
             $transaction = Yii::$app->db->beginTransaction();
             $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity['uid']);
-            $trans = $payForm->getTrans();
+
+            $trans = null;
+            if (! $trans = $payForm->getTrans()) {
+                $transaction->rollback();
+                throw new Exception('产品已经支付过，请不要重复支付!');
+                exit;
+            }
 
             //如果账户余额大于交易的总金额，则直接支付
             $callbackData = ['bid'=>$payForm->booking_id, 'trans_id'=>$trans->id];
@@ -181,13 +187,13 @@ class AccountController extends Controller
                         throw new Exception('生成支付信息出错');
                     }
                 }
-                
+
                 //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
                 $payment = new Payment();
                 $payChannel = PayChannel::findOne($payForm->channel_id);
 
                 //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
-                $payment = new Payment($payChannel->alias); 
+                $payment = new Payment($payChannel->alias);
                 $returnType = null;
                 if ($payChannel->alias == 'wechatpay') {
                     $returnType = 'QRCodeUrl';
@@ -203,17 +209,17 @@ class AccountController extends Controller
                 'model' => $payForm,
                 'channels'=>$channels,
             ]);
-        } 
+        }
 
     }
 
     /**
      * @brief 处理充值消息通知的action,对于notify来讲，不需要做页面跳转，只需要针对不同的支付方式返回对应的状态
      *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
+     * @return  public function
+     * @retval
+     * @see
+     * @note
      * @author 吕宝贵
      * @date 2015/12/09 23:30:24
     **/
@@ -242,9 +248,30 @@ class AccountController extends Controller
                     $transaction = Yii::$app->db->beginTransaction();
                     $transOrder = Trans::findOne($trans->trans_id_ext);
                     if (!$transOrder) {
-                        return false;
+                        $transaction->rollback();
+                        return '无法找到订单';
                     }
                     if (Yii::$app->account->pay($transOrder)) {
+
+                        //如果关联交易为产品购买
+                        if ($transOrder->trans_type_id == Trans::TRANS_TYPE_TRADE) {
+                            $booking = Booking::findOne(['bid'=>$transOrder->trans_id_ext]);
+                            if (! $booking) {
+                                $transaction->rollback();
+                                return '找不到订单了';
+                            }
+
+                            $callbackData = [
+                                'bid' =>$booking->bid ,
+                                'trans_id' => $booking->trans_id,
+                                ];
+
+                            if (! Booking::processPaySuccess($callbackData)) {
+                                $transaction->rollback();
+                                return '订单保存失败';
+                            }
+                        }
+
                         $transaction->commit();
                         //页面跳转逻辑
                     }
@@ -260,11 +287,12 @@ class AccountController extends Controller
             else {
                 $transaction->rollback();
             }
-        } 
+        }
         catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
-        
+        return 'OK';
+
     }
 
 }

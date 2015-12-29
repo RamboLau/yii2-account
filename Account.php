@@ -16,6 +16,8 @@ use lubaogui\payment\models\Receivable;
 class Account extends BaseAccount 
 {
 
+    private $vouchAccountId = 13;
+
     /**
      * @brief 用户直接购买另外一个用户的产品,controller用于构建trans, account完成最终的支付业务逻辑
      *
@@ -35,7 +37,7 @@ class Account extends BaseAccount
         }
 
         //不论哪种交易模式，首先从用户账户扣款，扣款成功才有后续动作
-        if (!$buyerAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '产品交易', '产品交易')) {
+        if (!$buyerAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '交易扣款', '产品担保交易扣款')) {
             return false;
         }
 
@@ -54,7 +56,7 @@ class Account extends BaseAccount
         //担保支付情况，需要将款项在用户扣款成功之后支付给中间账号
         if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
             $vouchAccount = $this->getUserAccount($vouchAccountId);
-            if (!$vouchAccount->plus($money, $trans->id, $trans->trans_type_id, '交易', '担保交易')) {
+            if (!$vouchAccount->plus($trans->total_money, $trans->id, $trans->trans_type_id, '交易', '担保交易')) {
                 return false;
             }
 
