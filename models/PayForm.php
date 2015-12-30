@@ -70,6 +70,7 @@ class PayForm extends Model
             return $trans;
         }
         else {
+            $this->addErrors($trans->getErrors());
             return false;
         }
 
@@ -85,11 +86,13 @@ class PayForm extends Model
         $this->booking = Booking::findOne(['bid'=>$this->booking_id, 'q_uid'=>Yii::$app->user->identity['uid']]);
 
         if (empty($this->booking)) {
+            $this->addError('booking_id', '指定的订单不存在');
             return false;
         }
 
         //如果预定已经成功支付，则不允许用户进行第二次支付
         if ($this->booking->status > Booking::PAY_STATUS_SUCCEEDED) {
+            $this->addError('booking_id', '订单已支付!');
             return false;
         }
 

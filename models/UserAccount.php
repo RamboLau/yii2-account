@@ -95,6 +95,8 @@ class UserAccount extends ActiveRecord
 
     }
 
+
+
     /**
      * @brief 
      *
@@ -106,45 +108,7 @@ class UserAccount extends ActiveRecord
      * @date 2015/12/01 16:26:45
     **/
     public function plus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
-
-        $this->balance += $money;
-        if ($this->save()) {
-            //记录账单
-            $bill = new Bill();
-            $bill->uid = $this->uid;
-            $bill->trans_id = $transId;
-            $bill->trans_type_id = $transTypeId;
-            $bill->trans_type_name = $transTypeName;
-            $bill->money = $money;
-            $bill->balance_type = static::BALANCE_TYPE_PLUS;
-            $bill->currency = $currency;
-            $bill->description = $description;
-            if (! $bill->save()) {
-                return false;
-            }
-
-            //账户快照产生
-            $accountLog = new UserAccountLog();
-            $accountLog->uid = $this->uid;
-            $accountLog->account_type = $this->type;
-            $accountLog->currency = $currency;
-            $accountLog->balance = $this->balance;
-            $accountLog->deposit = $this->deposit;
-            $accountLog->frozen_money = $this->frozen_money;
-            $accountLog->balance_type = static::BALANCE_TYPE_PLUS;
-            $accountLog->trans_money = $money;
-            $accountLog->trans_desc = $description;
-
-            if (! $accountLog->save()) {
-                return false;
-            }
-            return true;
-
-        }    
-        else {
-            return false;
-        }
-
+        return $this->balance(static::BALANCE_TYPE_PLUS, $money, $transId, $transTypeId, $transTypeName, $description, $currency =1);
     }
 
     /**
@@ -158,48 +122,7 @@ class UserAccount extends ActiveRecord
      * @date 2015/12/04 22:57:20
     **/
     public function minus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
-
-        $this->balance = $this->balance - $money;
-        if ($this->save()) {
-            //记录账单
-            $bill = new Bill();
-            $bill->uid = $this->uid;
-            $bill->trans_id = $transId;
-            $bill->trans_type_id = $transTypeId;
-            $bill->trans_type_name = $transTypeName;
-            $bill->money = $money;
-            $bill->balance_type = static::BALANCE_TYPE_MINUS;
-            $bill->currency = $currency;
-            $bill->description = $description;
-            if ($bill->save()) {
-                return true;
-            }
-            else {
-                return false;
-            }
-
-            //账户快照产生
-            $accountLog = new UserAccountLog();
-            $accountLog->uid = $this->uid;
-            $accountLog->account_type = $this->account_type;
-            $accountLog->currency = $currency;
-            $accountLog->balance = $this->balance;
-            $accountLog->deposit = $this->deposit;
-            $accountLog->frozen_money = $this->frozen_money;
-            $accountLog->balance_type = static::BALANCE_TYPE_MINUS;
-            $accountLog->trans_money = $money;
-            $accountLog->trans_desc = $description;
-
-            if ($accountLog->save()) {
-                return true;
-            }
-            else {
-                return false;
-            }
-        } 
-        else {
-            return false;
-        }
+        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $transId, $transTypeId, $transTypeName, $description, $currency =1);
     }
 
     /**
@@ -213,6 +136,71 @@ class UserAccount extends ActiveRecord
      * @date 2015/12/04 23:50:06
     **/
     public function freeze() {
+
+    }
+
+    /**
+     * @brief 账户减除或者增加金额
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/30 14:39:00
+    **/
+    public function balance($balanceType, $money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
+
+        if ($balanceType === static::BALANCE_TYPE_PLUS) {
+            $this->balance += $money;
+        }
+        else if ($balanceType === static::BALANCE_TYPE_MINUS) {
+            $this->balance -= $money;
+        }
+        else {
+            $this->addError('uid', '不支持提交的账户操作类型');
+            return false;
+        }
+
+
+        if ($this->save()) {
+            //记录账单
+            $bill = new Bill();
+            $bill->uid = $this->uid;
+            $bill->trans_id = $transId;
+            $bill->trans_type_id = $transTypeId;
+            $bill->trans_type_name = $transTypeName;
+            $bill->money = $money;
+            $bill->balance_type = $balanceType;
+            $bill->currency = $currency;
+            $bill->description = $description;
+            if (! $bill->save()) {
+                $this->addErrors($bill->getErrors());
+                return false;
+            }
+
+            //账户快照产生
+            $accountLog = new UserAccountLog();
+            $accountLog->uid = $this->uid;
+            $accountLog->account_type = $this->type;
+            $accountLog->currency = $currency;
+            $accountLog->balance = $this->balance;
+            $accountLog->deposit = $this->deposit;
+            $accountLog->frozen_money = $this->frozen_money;
+            $accountLog->balance_type = $balanceType;
+            $accountLog->trans_money = $money;
+            $accountLog->trans_desc = $description;
+
+            if (! $accountLog->save()) {
+                $this->addErrors($accountLog->getErrors());
+                return false;
+            }
+            return true;
+
+        }    
+        else {
+            return false;
+        }
 
     }
 
