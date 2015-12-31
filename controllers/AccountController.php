@@ -215,6 +215,43 @@ class AccountController extends Controller
     }
 
     /**
+     * @brief 支付宝回调处理action
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/01 00:35:46
+    **/
+    public function actionAlipayNotify() {
+        //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
+        //此方法不妥，换为使用其他方法来判断支付channel_id
+        $payChannelId = 1;
+        $this->processPayNotify($payChannelId);
+
+    }
+
+
+    /**
+     * @brief 微信支付回调处理
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/01 00:37:07
+    **/
+    public function actionWechatPayNotify() {
+        //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
+        //此方法不妥，换为使用其他方法来判断支付channel_id
+        $payChannelId = 2;
+        return $this->processPayNotify($payChannelId);
+
+    }
+
+    /**
      * @brief 处理充值消息通知的action,对于notify来讲，不需要做页面跳转，只需要针对不同的支付方式返回对应的状态
      *
      * @return  public function
@@ -224,12 +261,9 @@ class AccountController extends Controller
      * @author 吕宝贵
      * @date 2015/12/09 23:30:24
     **/
-    public function actionPayNotify() {
+    protected function processPayNotify($payChannelId) {
 
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
-        //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
-        $payChannelId = Yii::$app->request->get('channel_id');
-
         $payment = new Payment($channels[$payChannelId]['alias']);
         //设置支付的成功和失败回调函数
         $handlers = [

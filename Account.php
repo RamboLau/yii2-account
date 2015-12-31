@@ -29,7 +29,7 @@ class Account extends BaseAccount
     **/
     public function behaviors() {
         return [
-            ErrorBehavior::className();
+            ErrorBehavior::className(),
         ];
     }
 

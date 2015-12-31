@@ -6,6 +6,7 @@ use yii\base\Model;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\UserAccount;
 use common\models\Booking;
+use common\models\BookingStatus;
 use common\models\Product;   
 
 /**
@@ -91,7 +92,7 @@ class PayForm extends Model
         }
 
         //如果预定已经成功支付，则不允许用户进行第二次支付
-        if ($this->booking->status > Booking::PAY_STATUS_SUCCEEDED) {
+        if ($this->booking->status > BookingStatus::PAYSUCCESS) {
             $this->addError('booking_id', '订单已支付!');
             return false;
         }
