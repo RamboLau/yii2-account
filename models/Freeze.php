@@ -25,6 +25,12 @@ use yii\behaviors\TimestampBehavior;
 class Freeze extends ActiveRecord 
 {
 
+    const FREEZE_STATUS_FREEZING = 1;
+    const FREEZE_STATUS_THAWED = 2;
+    const FREEZE_STATUS_FINISHED = 3;
+
+    const FREEZE_TYPE_WITHDRAW = 1;
+
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义
      *

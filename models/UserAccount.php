@@ -10,6 +10,7 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use lubaogui\account\models\Bill;
+use lubaogui\account\models\Freeze;
 use lubaogui\account\models\UserAccountLog;
  
  
