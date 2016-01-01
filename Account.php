@@ -266,7 +266,7 @@ class Account extends BaseAccount
             return false;
         }
 
-        $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' = Freeze::FREEZE_TYPE_WITHDRAW]);
+        $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' => Freeze::FREEZE_TYPE_WITHDRAW]);
 
         if (empty($freeze)) {
             $this->addError('display-error', '找不到对应的锁定记录');
