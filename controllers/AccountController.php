@@ -148,8 +148,7 @@ class AccountController extends Controller
             $trans = null;
             if (! $trans = $payForm->getTrans()) {
                 $transaction->rollback();
-                throw new Exception('产品已经支付过，请不要重复支付!');
-                exit;
+                throw new Exception(json_encode($payForm->getErrors()));
             }
 
             //如果账户余额大于交易的总金额，则直接支付
