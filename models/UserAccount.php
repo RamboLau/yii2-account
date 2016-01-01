@@ -136,7 +136,19 @@ class UserAccount extends ActiveRecord
      * @date 2015/12/04 23:50:06
     **/
     public function freeze($money) {
+        if ($this->balance < $money) {
+            $this->addError('balance', '余额不足');
+            return false;
+        }
+        $this->balance = $this->balance - $money;
+        $this->frozen_money = $this->frozen_money + $money;
 
+        if ($this->save()) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     /**

@@ -36,6 +36,7 @@ class PayForm extends Model
     {
         return [
             [['booking_id'], 'required'],
+            [['booking_id'], 'integer'],
             [['channel_id'], 'safe'],
         ];
     }
