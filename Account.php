@@ -248,6 +248,58 @@ class Account extends BaseAccount
         }
     }
 
+
+    /**
+     * @brief 解除锁定,只有用户主动取消提现或者冻结操作的时候会接触freeze
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/01 21:51:16
+    **/
+    public function unfreeze($withdrawId, $type) {
+        $withdraw = Withdraw::findOne($withdrawId);
+        if (empty($withdraw)) {
+            $this->addError('display-error', '提现申请记录不存在');
+            return false;
+        }
+
+        $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' = Freeze::FREEZE_TYPE_WITHDRAW]);
+
+        if (empty($freeze)) {
+            $this->addError('display-error', '找不到对应的锁定记录');
+            return false;
+        }
+
+        if ($freeze->status === FREEZE_STATUS_THAWED) {
+            $this->addError('display-error', '该记录已经解锁');
+            return false;
+
+        }
+
+        $freeze->thawed_at = time();
+        $freeze->status = Freeze::FREEZE_STATUS_THAWED;
+
+        if ($freeze->save()) {
+            $userAccount = $this->getUserAccount($withdraw->uid);
+            if ($userAccount->unfreeze($withdraw->money)) {
+                return true;
+            }
+            else {
+                $this->addError('display-error', '冻结用户金额失败');
+                return false;
+            }
+        }
+        else {
+
+            $this->addError('display-error', '冻结记录保存失败');
+            return false;
+        }
+
+    }
+
     /**
      * @brief 用户提现，提现只能提取balance中的额度，保证金无法提取,该方法完成实际的提现操作,实际需要WithdrawForm
      * 来产生trans

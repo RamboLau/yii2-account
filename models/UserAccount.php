@@ -151,6 +151,30 @@ class UserAccount extends ActiveRecord
         }
     }
 
+
+    /**
+     * @brief 解锁金额
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/01 22:03:21
+    **/
+    public function unfreeze($money) {
+        $this->balance = $this->balance + $money;
+        $this->frozen_money = $this->frozen_money - $money;
+
+        if ($this->save()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+
     /**
      * @brief 账户减除或者增加金额
      *
