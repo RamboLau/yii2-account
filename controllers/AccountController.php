@@ -138,7 +138,8 @@ class AccountController extends Controller
     {
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payForm = new PayForm();
-        if ($payForm->load(Yii::$app->request->post())) {
+        $requestParams = array_merge(Yii::$app->request->get(), Yii::$app->request->post());
+        if ($payForm->load($requestParams, '')) {
 
             //根据form产生trans,trans处于未支付状态
             $transaction = Yii::$app->db->beginTransaction();
@@ -231,7 +232,6 @@ class AccountController extends Controller
         $this->processPayNotify($payChannelId);
 
     }
-
 
     /**
      * @brief 微信支付回调处理

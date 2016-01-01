@@ -126,7 +126,7 @@ class UserAccount extends ActiveRecord
     }
 
     /**
-     * @brief 
+     * @brief 冻结用户的金额,该操作仅操作用户的金额，不填写freeze记录
      *
      * @return  public function 
      * @retval   
@@ -135,7 +135,7 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/04 23:50:06
     **/
-    public function freeze() {
+    public function freeze($money) {
 
     }
 

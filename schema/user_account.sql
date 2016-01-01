@@ -119,9 +119,10 @@ create table `bill` (
 drop table if exists `freeze`;
 create table `freeze` (
     `id` bigint primary key not null auto_increment comment '自增id',
-    `freeze_type` smallint unsigned not null default 1 comment '冻结类型: 1 提现',
+    `type` smallint unsigned not null default 1 comment '冻结类型: 1 提现',
     `status` tinyint(1) not null default 0 comment '账号使用状态: 1 冻结中 2 已完成交易 3 交易失败已返还原账户',
     `uid` bigint(20) unsigned not null default 0 comment '用户id',
+    `source_id` bigint unsigned not null comment '冻结来源id',
     `trans_id` bigint unsigned not null comment '账单来源交易id',
     `money` decimal(16,2) not null default 0.00 comment '冻结金额',  
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币',
@@ -130,6 +131,7 @@ create table `freeze` (
     `created_at` int(10) not null default 0 comment '创建时间',
     `updated_at` int(10) not null default 0 comment '创建时间',
     key idx_trans (`trans_id`),
+    key idx_sid (`source_id`),
     key uidx_uid_ct (`uid`, `created_at`),
     key uidx_uid_trans (`uid`, `trans_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='冻结资金表';

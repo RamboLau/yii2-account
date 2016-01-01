@@ -6,7 +6,7 @@ use yii\helpers\ArrayHelper;
 use lubaogui\account\BaseAccount;
 use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
-use lubaogui\account\models\Bill;
+use lubaogui\account\models\Freeze;
 use lubaogui\account\behaviors\ErrorBehavior;;
 use lubaogui\payment\Payment;
 use lubaogui\payment\models\Receivable;
@@ -190,7 +190,7 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 转账操作,转账操作属于直接支付给对方金额,扩展时使用
+     * @brief 转账操作,转账操作属于直接支付给对方金额,扩展时使用 TODO
      *
      * @return  public function 
      * @retval   
@@ -202,6 +202,49 @@ class Account extends BaseAccount
     public function transfer($transParams) {
 
 
+    }
+
+
+    /**
+     * @brief 冻结资金,在提现申请的时候，会冻结资金,如果用户取消，会取消冻结资金
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/01 20:00:36
+    **/
+    public function freeze($withdrawId) {
+        $withdraw = Withdraw::findOne($withdrawId);
+        if (empty($withdraw)) {
+            $this->addError('display-error', '提现申请记录不存在');
+            return false;
+        }
+
+        //产生freeze记录
+        $freeze = new Freeze();
+        $freeze->source_id = $withdrawId;
+        $freeze->type = Freeze::FREEZE_TYPE_WITHDRAW;
+        $freeze->currency = 1;
+        $freeze->money = $withdraw->money;
+        $freeze->description = '提现';
+        
+        if ($freeze->save()) {
+            $userAccount = $this->getUserAccount($withdraw->uid);
+            if ($userAccount->freeze($withdraw->money)) {
+                return true;
+            }
+            else {
+                $this->addError('display-error', '冻结用户金额失败');
+                return false;
+            }
+        }
+        else {
+
+            $this->addError('display-error', '冻结记录保存失败');
+            return false;
+        }
     }
 
     /**
@@ -219,6 +262,7 @@ class Account extends BaseAccount
 
         $withdrawUser = $this->getUserAccount($trans->from_uid);
         if ($money > $withdrawUser->balance) {
+            $this->addError('display-error', '用户提现的金额超出用户的金额');
             return false;
         }
 
