@@ -4,7 +4,7 @@ namespace frontend\controllers;
 use Yii;
 use yii\base\InvalidParamException;
 use yii\base\Exception;
-use yii\web\Controller;
+use common\controllers\WebController;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use lubaogui\payment\Payment;
@@ -16,7 +16,7 @@ use frontend\models\PayForm;
 /**
  * Account controller
  */
-class AccountController extends Controller
+class AccountController extends WebController
 {
     public $enableCsrfValidation = true;
 
