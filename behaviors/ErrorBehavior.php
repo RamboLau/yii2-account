@@ -75,13 +75,6 @@ class ErrorBehavior extends Behavior
     public function init()
     {
         parent::init();
-
-        if (empty($this->attributes)) {
-            $this->attributes = [
-                BaseActiveRecord::EVENT_BEFORE_INSERT => [$this->createdAtAttribute, $this->updatedAtAttribute],
-                BaseActiveRecord::EVENT_BEFORE_UPDATE => $this->updatedAtAttribute,
-            ];
-        }
     }
 
     /**
