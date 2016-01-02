@@ -51,7 +51,6 @@ drop table if exists `trans`;
 create table `trans` (
     `id` bigint unsigned not null primary key auto_increment comment '交易流水id',
     `trans_id_ext` bigint unsigned not null default 0 comment '外部交易号id,如订单号,可为空',
-    `is_enabled` tinyint(1) unsigned not null default 0 comment '账号状态: 1 有效 2 异常封禁 0为非法值',
     `trans_type_id` smallint unsigned not null comment '交易类型id',
     `settlement_type` tinyint(1) unsigned not null comment '结算类型: 1 实时结算 2 异步结算, 目前仅支持实时结算',
     `pay_mode` tinyint unsigned not null comment '交易模式: 1 中介担保支付, 2 直付交易 3 预付款 0 非法',
@@ -71,7 +70,7 @@ create table `trans` (
     `share_to_uid` bigint unsigned not null default 0 comment '支付第三个用户的利润分成,',  
     `share_fee` decimal(16,2) not null default 0.00 comment '分润金额, 分润会在交易完成时结算',  
     `earnest_money` decimal(16,2) not null default 0.00 comment '定金或者保证金，定金金额退款时不返还给买家,而是给目标客户',  
-    `total_money` decimal(16,2) not null default 0.00 comment '交易总金额, 对于担保交易，会通过中间账户，成功后转到目标账户',  
+    `total_money` decimal(16,2) not null default 0.00 comment '交易总金额, 对于担保交易，会通过中间账户，成功后转到目标账户', 
     `description` varchar(32) not null default '' comment '交易描述',
     `created_at` int(10) not null default 0 comment '创建时间',
     `created_at_ext` int(10) not null default 0 comment '外部创建时间',

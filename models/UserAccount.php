@@ -175,6 +175,28 @@ class UserAccount extends ActiveRecord
         }
     }
 
+    /**
+     * @brief 完成金额冻结，从冻结余额中扣除冻结记录对应的金额
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/02 14:53:04
+    **/
+    public function finishFreeze($money) {
+
+        $this->frozen_money = $this->frozen_money - $money;
+        if ($this->save()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+
+    }
+
 
     /**
      * @brief 账户减除或者增加金额

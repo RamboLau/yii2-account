@@ -248,7 +248,6 @@ class Account extends BaseAccount
         }
     }
 
-
     /**
      * @brief 解除锁定,只有用户主动取消提现或者冻结操作的时候会接触freeze
      *
@@ -259,7 +258,7 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2016/01/01 21:51:16
     **/
-    public function unfreeze($withdrawId, $type) {
+    public function unfreeze($withdrawId) {
         $withdraw = Withdraw::findOne($withdrawId);
         if (empty($withdraw)) {
             $this->addError('display-error', '提现申请记录不存在');
@@ -268,7 +267,7 @@ class Account extends BaseAccount
 
         $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' => Freeze::FREEZE_TYPE_WITHDRAW]);
 
-        if ($freeze->finishFreeze()) {
+        if ($freeze->unfreeze()) {
             $userAccount = $this->getUserAccount($withdraw->uid);
             if ($userAccount->unfreeze($withdraw->money)) {
                 return true;
@@ -302,6 +301,7 @@ class Account extends BaseAccount
             $this->addError('display-error', '提现申请记录不存在');
             return false;
         }
+
         $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' => Freeze::FREEZE_TYPE_WITHDRAW]);
 
     }
@@ -324,26 +324,72 @@ class Account extends BaseAccount
             return false;
         }
 
-        $withdrawUser = $this->getUserAccount($trans->from_uid);
-        if ($money > $withdrawUser->balance) {
-            $this->addError('display-error', '用户提现的金额超出用户的金额');
+        $withdrawUser = $this->getUserAccount($withdraw->uid);
+
+        //生成trans
+        $trans = new Trans();
+        $trans->trans_id_ext = $withdrawId;
+        $trans->trans_type_id = Trans::TRAN_TYPE_WITHDRAW;
+        $trans->status = Trans::PAY_STATUS_WAITPAY;
+        $trans->pay_mode = Trans::PAY_MODE_DIRECTPAY;;
+        $trans->total_money = $withdraw->money;
+        $trans->from_uid = $withdraw->uid;
+        $trans->currency = 1;
+
+        if (! $trans->save()) {
+            $this->addError('display-error', '处理提现时保存交易信息出错');
+            $this->addErrors($trans->getErrors());
             return false;
         }
 
-        //创建付款记录
-        //Todo: 补全相关信息
-        $payable = new Payable();
-        $payable->money = $trans->money;
-        $payable->status = 1;
+        $payable = null;
+        if (! $payable = Payable::findOne(['trans_id'=>$trans->id])) {
+            $payable = new  Payable();
+        }
+
+        $payable->trans_id = $trans->id;
+        $payable->from_uid = $trans->from_uid;
+        $payable->currency = 1;
+        $payable->money = $trans->total_money;
+        $payable->status = Payable::PAY_STATUS_WAITPAY;
+        $payable->pay_method = Payable::PAY_METHOD_DIRECTPAY;
+
+        //返回收款记录,用以跳转到第三方进行支付
+        if ($payable->save()) {
+            return true;
+        }
+        else {
+            $this->addErrors($payable->getErrors());
+            return false;
+        }
+ 
+    }
+
+
+    /**
+     * @brief 处理提现下载支付列表到银行成功的动作
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/02 16:30:03
+    **/
+    public function processWithdrawPaying($payable, $withdrawPayingCallback) {
+
+        $payable->status = Payable::PAY_STATUS_PAYING;
+
         if (!$payable->save()) {
+            $this->addError('display-error', '付款记录状态保存失败');
             return false;
         }
+        
+        $trans = $payable->trans;
+        $withdrawId = $trans->trans_id_ext;
 
-        //创建冻结记录，冻结的意思是该笔款项在途，无法使用,提现申请审核中可以取消提现，提现中状态无法取消
-        if (!$withdrawUser->freeze($trans->money)) {
-            return false;
-        }
-        return true;
+        $callbackData['id'] = $withdrawId ;
+        return call_user_func($withdrawPayingCallback, $callbackData);
 
     }
 
@@ -357,26 +403,35 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 20:31:42
      **/
-    public function processWithdrawPaySuccess($payId, $callback) {
+    public function processWithdrawPaySuccess($payId, $paySuccesscallback) {
 
         $payable = Payable::findOne($payId); 
-        $withdrawUser = UserAccount::findOne($payable->to_uid);
-        //完成冻结，将款项从冻结中减除
-        $withdrawUser->finishFreeze();
-        $payable->status = Payable::PAY_STATUS_SUCCEEDED;
-        if (!$payable->save()) {
+
+        if (!$payable) {
+            $this->addError('display-error', '获取付款记录信息失败');
             return false;
         }
-        $trans = Trans::findOne($payable->trans_id);
+
+        //处理交易信息
+        $trans = $payable->trans;
         $trans->status = Trans::PAY_STATUS_FINISHED;
-        if ($trans->save()) {
-            //回调函数，主要在action层填写，记录订单的信息更新等,如果是SOA服务，此操作会触发发送一条成功消息
-            call_user_func($callback, $data);  
+        if (!$trans->save()) {
+            $this->addError('display-error', '交易信息保存失败');
+            return false;
+        }
+
+        $withdrawUser = $this->getUserAccount($payable->to_uid);
+        //完成冻结，将款项从冻结中减除
+        if ($withdrawUser->finishFreeze($trans->total_money)) {
             return true;
+        }
+        else {
+            $this->addError('display-error', '减除用户冻结余额时出错!');
+            $this->addErrors($withdrawUser->getErrors());
+            return false;
         }
 
     }
-
 
     /**
      * @brief 根据交易记录产生收款记录
@@ -443,6 +498,21 @@ class Account extends BaseAccount
         }
  
         return $this->generateReceivable($transCharge);
+
+    }
+
+    /**
+     * @brief 根据交易记录产生收款记录
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/23 00:07:28
+    **/
+    public function generatePayable($trans) {
+        //新建收款记录
 
     }
 
