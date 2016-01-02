@@ -164,10 +164,9 @@ class AccountController extends WebController
                         $transaction->rollback();
                         return false;
                     }
-                    //设置通知消息
-                    Yii::$app->success('订单支付成功');
-                    //跳转到订单支付成功页面
-                    $this->redirect();
+                    //支付成功
+                    return ['code'=>0, 'message'=>'日你嘴，居然支付成功了，还没有用支付!'];
+
                 }
                 else {
                     $transaction->rollback();

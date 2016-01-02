@@ -56,7 +56,7 @@ class Account extends BaseAccount
 
         //担保支付情况，需要将款项在用户扣款成功之后支付给中间账号
         if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
-            $vouchAccount = $this->getUserAccount($vouchAccountId);
+            $vouchAccount = $this->getUserAccount($this->vouchAccountId);
             if (!$vouchAccount->plus($trans->total_money, $trans->id, $trans->trans_type_id, '交易', '担保交易')) {
                 return false;
             }
