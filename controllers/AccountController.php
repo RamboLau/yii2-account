@@ -203,7 +203,9 @@ class AccountController extends WebController
                 //跳转到支付或者返回支付二维码地址
                 $qrCodeUrl = $payment->gotoPay($receivable, $returnType);
                 if ($qrCodeUrl) {
-                    return ['pay_url'=>$qrCodeUrl];
+                    $this->data = [
+                        'pay_url'=>$qrCodeUrl,
+                    ];
                 }
                 else {
                     throw new Exception('支付失败');
