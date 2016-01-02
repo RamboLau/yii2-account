@@ -74,7 +74,7 @@ class AccountController extends WebController
     **/
     public function actionDetail() {
 
-        $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity['uid']);
+        $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity->uid);
         return $userAccount;
 
     }
@@ -144,7 +144,7 @@ class AccountController extends WebController
 
             //根据form产生trans,trans处于未支付状态
             $transaction = Yii::$app->db->beginTransaction();
-            $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity['uid']);
+            $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity->uid);
 
             $trans = null;
             if (! $trans = $payForm->getTrans()) {
