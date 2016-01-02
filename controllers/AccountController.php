@@ -165,7 +165,7 @@ class AccountController extends WebController
                         return false;
                     }
                     //支付成功
-                    return ['code'=>0, 'message'=>'日你嘴，居然支付成功了，还没有用支付!'];
+                    $this->redirect(['profile']);
 
                 }
                 else {
