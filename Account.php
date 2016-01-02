@@ -268,21 +268,7 @@ class Account extends BaseAccount
 
         $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' => Freeze::FREEZE_TYPE_WITHDRAW]);
 
-        if (empty($freeze)) {
-            $this->addError('display-error', '找不到对应的锁定记录');
-            return false;
-        }
-
-        if ($freeze->status === FREEZE_STATUS_THAWED) {
-            $this->addError('display-error', '该记录已经解锁');
-            return false;
-
-        }
-
-        $freeze->thawed_at = time();
-        $freeze->status = Freeze::FREEZE_STATUS_THAWED;
-
-        if ($freeze->save()) {
+        if ($freeze->finishFreeze()) {
             $userAccount = $this->getUserAccount($withdraw->uid);
             if ($userAccount->unfreeze($withdraw->money)) {
                 return true;
@@ -301,7 +287,27 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 用户提现，提现只能提取balance中的额度，保证金无法提取,该方法完成实际的提现操作,实际需要WithdrawForm
+     * @brief 完成提现
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/02 11:02:22
+    **/
+    public function finishWithdraw($withdrawId, $successCallback, $failureCallback) {
+        $withdraw = Withdraw::findOne($withdrawId);
+        if (empty($withdraw)) {
+            $this->addError('display-error', '提现申请记录不存在');
+            return false;
+        }
+        $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' => Freeze::FREEZE_TYPE_WITHDRAW]);
+
+    }
+
+    /**
+     * @brief 处理实际的提现流程，只有在提现审核通过之后才会调用此方法 
      * 来产生trans
      *
      * @return  public function 
@@ -311,7 +317,12 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 17:44:54
      **/
-    public function withdraw($trans) {
+    public function processWithdraw($withdrawId) {
+        $withdraw = Withdraw::findOne($withdrawId);
+        if (empty($withdraw)) {
+            $this->addError('display-error', '提现申请记录不存在');
+            return false;
+        }
 
         $withdrawUser = $this->getUserAccount($trans->from_uid);
         if ($money > $withdrawUser->balance) {

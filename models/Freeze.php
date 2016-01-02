@@ -42,7 +42,6 @@ class Freeze extends ActiveRecord
         return '{{%freeze}}';
     }
 
-
     /**
      * @brief 自动设置 created_at和updated_at
      *
@@ -59,6 +58,61 @@ class Freeze extends ActiveRecord
         ];
     }
 
+    /**
+     * @brief 
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/02 11:22:10
+    **/
+    public function unfreeze() {
+        if (empty($freeze)) {
+            $this->addError('display-error', '找不到对应的锁定记录');
+            return false;
+        }
+
+        if ($freeze->status === FREEZE_STATUS_THAWED) {
+            $this->addError('display-error', '该记录已经解锁');
+            return false;
+
+        }
+
+        $freeze->thawed_at = time();
+        $freeze->status = Freeze::FREEZE_STATUS_THAWED;
+
+        if ($freeze->save()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    /**
+     * @brief 完成冻结操作
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/02 11:11:21
+    **/
+    public function finishFreeze() {
+        if ($this->status === self::FREEZE_STATUS_FINISHED) {
+            return true;
+        }
+        $this->status = self::FREEZE_STATUS_FINISHED;
+        if ($this->save()) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 }
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */

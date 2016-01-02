@@ -11,6 +11,7 @@ use Yii;
 use yii\base\Exception;
 use yii\base\ErrorException;
 use yii\base\UserException;
+use yii\base\LBUserException;
 use yii\helpers\VarDumper;
 
 /**
@@ -62,41 +63,9 @@ class LBErrorHandler extends \yii\web\ErrorHandler
             $response = new Response();
         }
 
-        $useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof UserException);
-
-        if ($useErrorView && $this->errorAction !== null) {
-            $result = Yii::$app->runAction($this->errorAction);
-            if ($result instanceof Response) {
-                $response = $result;
-            } else {
-                $response->data = $result;
-            }
-        } elseif ($response->format === Response::FORMAT_HTML) {
-            if (YII_ENV_TEST || isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-                // AJAX request
-                $response->data = '<pre>' . $this->htmlEncode($this->convertExceptionToString($exception)) . '</pre>';
-            } else {
-                // if there is an error during error rendering it's useful to
-                // display PHP error in debug mode instead of a blank screen
-                if (YII_DEBUG) {
-                    ini_set('display_errors', 1);
-                }
-                $file = $useErrorView ? $this->errorView : $this->exceptionView;
-                $response->data = $this->renderFile($file, [
-                    'exception' => $exception,
-                ]);
-            }
-        } elseif ($response->format === Response::FORMAT_RAW) {
-            $response->data = $exception;
-        } else {
-            $response->data = $this->convertExceptionToArray($exception);
-        }
-
-        if ($exception instanceof HttpException) {
-            $response->setStatusCode($exception->statusCode);
-        } else {
-            $response->setStatusCode(500);
-        }
+        //$useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof UserException);
+        $response->format === Response::FORMAT_JSON;
+        $response->data = $this->convertExceptionToArray($exception);
 
         $response->send();
     }
@@ -111,28 +80,13 @@ class LBErrorHandler extends \yii\web\ErrorHandler
         if (!YII_DEBUG && !$exception instanceof UserException && !$exception instanceof HttpException) {
             $exception = new HttpException(500, 'There was an error at the server.');
         }
-
+        
         $array = [
-            //'name' => ($exception instanceof Exception || $exception instanceof ErrorException) ? $exception->getName() : 'Exception',
-            'message' => $exception->getMessage(),
             'code' => $exception->getCode(),
+            'message' => $exception->getMessage(),
         ];
-        if ($exception instanceof HttpException) {
-            $array['status'] = $exception->statusCode;
-        }
-        if (YII_DEBUG) {
-            $array['type'] = get_class($exception);
-            if (!$exception instanceof UserException) {
-                $array['file'] = $exception->getFile();
-                $array['line'] = $exception->getLine();
-                $array['stack-trace'] = explode("\n", $exception->getTraceAsString());
-                if ($exception instanceof \yii\db\Exception) {
-                    $array['error-info'] = $exception->errorInfo;
-                }
-            }
-        }
-        if (($prev = $exception->getPrevious()) !== null) {
-            $array['previous'] = $this->convertExceptionToArray($prev);
+        if ($exception instanceof LBUserException) {
+            $array['data'] = $exception->getErrors();
         }
 
         return $array;
