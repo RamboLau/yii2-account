@@ -17,7 +17,7 @@ class Account extends BaseAccount
 {
 
 
-    private $vouchAccountId = 13;
+    private $vouchAccountId = 1;
 
     /**
      * @brief 用户直接购买另外一个用户的产品,controller用于构建trans, account完成最终的支付业务逻辑
