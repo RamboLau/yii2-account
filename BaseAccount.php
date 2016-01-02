@@ -8,6 +8,7 @@ use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
 use lubaogui\payment\Payment;
+use lubaogui\account\behaviors\ErrorBehavior;;
 
 /**
  * 该类属于对账户所有对外接口操作的一个封装，账户的功能有充值，提现，担保交易，直付款交易等,账户操作中包含利润分账，但是分账最多支持2个用户分润
@@ -35,6 +36,22 @@ class BaseAccount extends Component
     }
 
     /**
+     * @brief 默认的错误behaviors列表，此处主要是追加错误处理behavior
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/30 16:55:03
+    **/
+    public function behaviors() {
+        return [
+            ErrorBehavior::className(),
+        ];
+    }
+
+    /**
      * @brief 获取某个账户, 如果用户账户不存在，则自动为用户开通一个账号,账户信息不允许被缓存，当开启一个事务时，必须
      * 重新加载账号
      *
@@ -45,6 +62,10 @@ class BaseAccount extends Component
      * @date 2015/12/06 17:59:27
      **/
     public function getUserAccount($uid) {
+        if (empty($uid)) {
+            $this->addError('display-error', '提交的用户id为空');
+            return false;
+        }
         $userAccount = UserAccount::findOne($uid);
         if (!$userAccount) {
             $userAccount = new UserAccount();
@@ -54,6 +75,7 @@ class BaseAccount extends Component
             $userAccount->deposit = 0;
             $userAccount->currency = 1; //默认只支持人民币
             if (!$userAccount->save()) {
+                $this->addErrors($userAccount->getErrors());
                 return false; 
             }
         }

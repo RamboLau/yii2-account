@@ -7,7 +7,6 @@ use lubaogui\account\BaseAccount;
 use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Freeze;
-use lubaogui\account\behaviors\ErrorBehavior;;
 use lubaogui\payment\Payment;
 use lubaogui\payment\models\Receivable;
 
@@ -17,21 +16,6 @@ use lubaogui\payment\models\Receivable;
 class Account extends BaseAccount 
 {
 
-    /**
-     * @brief 默认的错误behaviors列表，此处主要是追加错误处理behavior
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/30 16:55:03
-    **/
-    public function behaviors() {
-        return [
-            ErrorBehavior::className(),
-        ];
-    }
 
     private $vouchAccountId = 13;
 
