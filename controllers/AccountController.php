@@ -11,6 +11,7 @@ use lubaogui\payment\Payment;
 use lubaogui\payment\models\PayChannel;
 use common\models\Booking;
 use lubaogui\account\models\UserAccount;
+use lubaogui\account\exceptions\LBUserException;
 use frontend\models\PayForm;
 
 /**

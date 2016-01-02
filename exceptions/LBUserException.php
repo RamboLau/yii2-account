@@ -5,7 +5,7 @@
  * @license http://www.yiiframework.com/license/
  */
 
-namespace yii\base;
+namespace lubaogui\account\exceptions;
 
 use yii\base\UserException;
 
