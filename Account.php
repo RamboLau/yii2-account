@@ -308,7 +308,14 @@ class Account extends BaseAccount
             return false;
         }
 
-        if (! $trans->freeze->saveTransId($trans->id)) {
+        $freeze = Freeze::findOne(['srouce_id'=>$withdraw->id]);
+
+        if (! $freeze) {
+            $this->addError('display-error', '找不到冻结记录');
+            return false;
+        }
+
+        if (! $freeze->saveTransId($trans->id)) {
             $this->addError('display-error', '冻结记录回写交易信息失败');
             $this->addErrors($trans->freeze->getErrors());
             return false;
