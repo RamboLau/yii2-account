@@ -12,6 +12,7 @@ use yii\db\ActiveRecord;
 use yii\behaviors\TimestampBehavior;
 use lubaogui\account\models\Bill;
 use lubaogui\account\models\TransType;
+use lubaogui\account\models\Freeze;
  
  
 /**
@@ -157,6 +158,20 @@ class Trans extends ActiveRecord
     **/
     public function getTransType() {
         return $this->hasOne(TransType::className(), ['id'=>'trans_type_id']);
+    }
+
+    /**
+     * @brief 获取交易对应的冻结记录，只有在提现场景下，该值才不为空
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/03 20:58:56
+    **/
+    public function getFreeze() {
+        return $this->hasOne(Freeze::className(), ['trans_id'=>'id']);
     }
 
 }
