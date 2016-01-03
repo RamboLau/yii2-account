@@ -123,6 +123,10 @@ class UserAccount extends ActiveRecord
      * @date 2015/12/04 22:57:20
     **/
     public function minus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
+        if ($this->balance - $money < 0) {
+            $this->addError('balance', '余额不足，无法支持操作');
+            return false;
+        }
         return $this->balance(static::BALANCE_TYPE_MINUS, $money, $transId, $transTypeId, $transTypeName, $description, $currency =1);
     }
 
