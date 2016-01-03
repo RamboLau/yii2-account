@@ -476,7 +476,7 @@ class Account extends BaseAccount
         $transCharge = null;
 
         //如果充值的交易已存在，则不再多余生成，复用充值交易
-        if (! $transCharge = Trans::find()->where(['trans_id_ext'=>$trans->id, 'trans_type_id'=>TRANS_TYPE_CHARGE])->one()) {
+        if (! $transCharge = Trans::find()->where(['trans_id_ext'=>$trans->id, 'trans_type_id'=>Trans::TRANS_TYPE_CHARGE])->one()) {
             $transCharge = new Trans();
         }
 
