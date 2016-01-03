@@ -211,6 +211,7 @@ class Account extends BaseAccount
         //产生freeze记录
         $freeze = new Freeze();
         $freeze->source_id = $withdrawId;
+        $freeze->uid = $withdraw->uid;
         $freeze->type = Freeze::FREEZE_TYPE_WITHDRAW;
         $freeze->status = Freeze::FREEZE_STATUS_FREEZING;
         $freeze->currency = 1;
