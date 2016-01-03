@@ -300,6 +300,7 @@ class Account extends BaseAccount
         $trans->pay_mode = Trans::PAY_MODE_DIRECTPAY;;
         $trans->total_money = $withdraw->money;
         $trans->from_uid = $withdraw->uid;
+        $trans->to_uid = $withdraw->uid;
         $trans->currency = 1;
 
         if (! $trans->save()) {
@@ -327,7 +328,7 @@ class Account extends BaseAccount
         }
 
         $payable->trans_id = $trans->id;
-        $payable->pay_uid = $trans->from_uid;
+        $payable->pay_uid = 0;
         $payable->receive_uid = $trans->to_uid;
         $payable->currency = 1;
         $payable->money = $trans->total_money;
