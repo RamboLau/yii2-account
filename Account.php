@@ -308,7 +308,7 @@ class Account extends BaseAccount
             return false;
         }
 
-        $freeze = Freeze::findOne(['srouce_id'=>$withdraw->id]);
+        $freeze = Freeze::findOne(['source_id'=>$withdraw->id]);
 
         if (! $freeze) {
             $this->addError('display-error', '找不到冻结记录');
