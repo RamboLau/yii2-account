@@ -295,7 +295,7 @@ class Account extends BaseAccount
         //生成trans
         $trans = new Trans();
         $trans->trans_id_ext = $withdrawId;
-        $trans->trans_type_id = Trans::TRAN_TYPE_WITHDRAW;
+        $trans->trans_type_id = Trans::TRANS_TYPE_WITHDRAW;
         $trans->status = Trans::PAY_STATUS_WAITPAY;
         $trans->pay_mode = Trans::PAY_MODE_DIRECTPAY;;
         $trans->total_money = $withdraw->money;
