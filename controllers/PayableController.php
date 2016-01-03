@@ -9,6 +9,7 @@ use yii\filters\AccessControl;
 use lubaogui\payment\models\PayChannel; 
 use common\models\Booking; 
 use lubaogui\account\models\Payable; 
+use yii\web\UploadedFile;
 
 /**
  * Payable controller
@@ -102,13 +103,22 @@ class PayableController extends Controller
      * @date 2015/12/22 18:13:36
     **/
     public function actionExportToExcel() {
+        
         $payables = Payable::find()->where(['status'=>Payable::PAY_STATUS_WAITPAY])->indexBy('id')->all();
-        $bankFields = [
-            ''=>
 
-        ];
+        $dataArray = [];
+        foreach ($payables as $payable) {
+            $item = [];
+            $item['money'] = $payable->money;
+            $userAccount = Yii::$app->account->getUserAccount($payable->uid);
+            if ($userAccount->processWithdrawPaySuccess()) {
 
-        return Yii::$app->excel->exportToExcel($payables);
+            }
+        }
+
+        $excelConverter = new Excel();
+        return $excelConverter->exportToExcel($dataArray);
+
     }
 
     /**
@@ -122,12 +132,25 @@ class PayableController extends Controller
      * @date 2015/12/22 18:14:17
     **/
     public function actionImportFromExcel() {
-        $excelFile = Yii::$app->request->post('payables');
-        $payables = $excelFile->parseToArray();
+        //获取文件
+        $excelFile = UploadedFile::getInstanceByName('payedfile');
+        if (! $excelFile) {
+            throw new Exception('获取上传文件失败');
+        }
+        $excelConverter = new Excel();
+        $payedItems = $excelConverter->importFromFile();
 
         //循环处理支付结果，对有问题的结果写入文件，导出给用户,一天提取的款项默认不多，因此不需要做异步处理
-        foreach ($payables as $payable) {
+        foreach ($payedItems as $payedItem) {
+            if ($payedItem['status']) {
+                $payable = Payable::findOne($payedItem['id']);
+                $userAccount = Yii::$app->account->getUserAccount($payable->uid);
+                $callbackFunc = [UserWithdraw::className(),'processFinishPayNotify'];
+                if (!$userAccount->processWithdrawPaySuccess($payable->id,$callbackFunc)) {
+                    //将错误处理的信息记录下来
 
+                }
+            }
         }
     }
 

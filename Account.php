@@ -349,7 +349,6 @@ class Account extends BaseAccount
  
     }
 
-
     /**
      * @brief 处理提现下载支付列表到银行成功的动作
      *
