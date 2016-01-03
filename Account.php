@@ -270,27 +270,6 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 完成提现
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/02 11:02:22
-    **/
-    public function finishWithdraw($withdrawId, $successCallback, $failureCallback) {
-        $withdraw = Withdraw::findOne($withdrawId);
-        if (empty($withdraw)) {
-            $this->addError('display-error', '提现申请记录不存在');
-            return false;
-        }
-
-        $freeze = Freeze::findOne(['source_id'=>$withdraw->id, 'type' => Freeze::FREEZE_TYPE_WITHDRAW]);
-
-    }
-
-    /**
      * @brief 处理实际的提现流程，只有在提现审核通过之后才会调用此方法 
      * 来产生trans
      *
@@ -332,7 +311,8 @@ class Account extends BaseAccount
         }
 
         $payable->trans_id = $trans->id;
-        $payable->from_uid = $trans->from_uid;
+        $payable->pay_uid = $trans->from_uid;
+        $payable->receive_uid = $trans->to_uid;
         $payable->currency = 1;
         $payable->money = $trans->total_money;
         $payable->status = Payable::PAY_STATUS_WAITPAY;
@@ -403,7 +383,7 @@ class Account extends BaseAccount
             return false;
         }
 
-        $withdrawUser = $this->getUserAccount($payable->to_uid);
+        $withdrawUser = $this->getUserAccount($payable->receive_uid);
         //完成冻结，将款项从冻结中减除
         if ($withdrawUser->finishFreeze($trans->total_money)) {
             return true;
@@ -414,10 +394,26 @@ class Account extends BaseAccount
             return false;
         }
 
+        //冻结记录完成
+        $freeze = Freeze::fineOne(['trans_id'=>$trans->id, 'type'=>Freeze::FREEZE_TYPE_WITHDRAW]);
+
+        if (!$freeze) {
+            $this->addError('display-error', '冻结记录不存在');
+            return false;
+        }
+
+        if (!$freeze->finishFreeze()) {
+            $this->addError('display-error', '冻结记录无法更改状态');
+            return false;
+        }
+
+        //用户设定的回调操作
+        $callbackData['id'] = $withdrawId ;
+        return call_user_func($paySuccesscallback, $callbackData);
     }
 
     /**
-     * @brief 根据交易记录产生收款记录
+     * @brief 根据交易记录产生收款记录,用户充值时使用
      *
      * @return  public function 
      * @retval   
