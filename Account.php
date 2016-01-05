@@ -383,7 +383,7 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 20:31:42
      **/
-    public function processWithdrawPaySuccess($payId, $paySuccesscallback) {
+    public function processWithdrawPaySuccess($payId, $paySuccessCallback) {
 
         $payable = Payable::findOne($payId); 
 
@@ -426,7 +426,7 @@ class Account extends BaseAccount
 
         //用户设定的回调操作
         $callbackData['id'] = $withdrawId ;
-        return call_user_func($paySuccesscallback, $callbackData);
+        return call_user_func($paySuccessCallback, $callbackData);
     }
 
     /**
