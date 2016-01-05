@@ -102,9 +102,11 @@ class PayableController extends Controller
      * @author 吕宝贵
      * @date 2015/12/22 18:13:36
     **/
-    public function actionExportToExcel() {
+    public function actionDownload() {
         
-        $payables = Payable::find()->where(['status'=>Payable::PAY_STATUS_WAITPAY])->indexBy('id')->all();
+        $transaction = Yii::$app->db->beginTransaction();
+        $payableConds = ['status'=>Payable::PAY_STATUS_WAITPAY];
+        $payables = Payable::find()->where($payableConds)->indexBy('id')->all();
 
         $dataArray = [];
         foreach ($payables as $payable) {
@@ -117,8 +119,47 @@ class PayableController extends Controller
         }
 
         $excelConverter = new Excel();
-        return $excelConverter->exportToExcel($dataArray);
+        if ($excelConverter->exportToExcel($dataArray)) {
+            $processBatch = new PayableProcessBatch();
+            $processBatch->total_money = $totalMoney;
+            $processBatch->count = $payableCount;
+            $processBatch->download_time = time();
+            if ($processBatch->save()) {
+                Yii::$app->db->createCommand->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_PAYING], $payableConds);
+                $transaction->commit();
+                return true;
+            }
+            else {
+                $transaction->rollback();
+                return true;
+            }
+        }
+        else {
+            $transaction->rollback();
+            throw new Exception('写入excel文件出错');
+        }
 
+    }
+
+
+    /**
+     * @brief 确认批量付款成功
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/05 15:35:21
+    **/
+    public function actionConfirmBatchPay() {
+        $batchProcessNo = Yii::$app->request->post('process_batch_no');
+        if (Yii::$app->db->createCommand()->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     /**
