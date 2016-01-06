@@ -18,7 +18,6 @@ use common\models\UserWithdraw;
 class Account extends BaseAccount 
 {
 
-
     private $vouchAccountId = 1;
 
     /**
