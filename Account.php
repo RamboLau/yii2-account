@@ -11,14 +11,13 @@ use lubaogui\payment\Payment;
 use lubaogui\payment\models\Payable;
 use lubaogui\payment\models\Receivable;
 use common\models\UserWithdraw;
+use yii\base\Exception;
 
 /**
  * 该类属于对账户所有对外接口操作的一个封装，账户的功能有充值，提现，担保交易，直付款交易等,账户操作中包含利润分账，但是分账最多支持2个用户分润
  */
 class Account extends BaseAccount 
 {
-
-    private $vouchAccountId = 1;
 
     /**
      * @brief 用户直接购买另外一个用户的产品,controller用于构建trans, account完成最终的支付业务逻辑
@@ -57,8 +56,8 @@ class Account extends BaseAccount
 
         //担保支付情况，需要将款项在用户扣款成功之后支付给中间账号
         if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
-            $vouchAccount = $this->getUserAccount($this->vouchAccountId);
-            if (!$vouchAccount->plus($trans->total_money, $trans->id, $trans->trans_type_id, '交易', '担保交易')) {
+            $vouchAccount = $this->getVouchAccount();
+            if (!$vouchAccount->plus($trans->total_money, $trans, '担保账号收款')) {
                 return false;
             }
 
@@ -112,7 +111,7 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 退款操作,会根据交易的具体形态来判断退款方法，仅用户之间的交易支持退款，充值和提现不支持退款
+     * @brief 退款操作,会根据交易的具体形态来判断退款方法，仅用户之间的交易支持退款，充值和提现不支持退款 
      *
      * @return  public function 
      * @retval   
@@ -145,21 +144,22 @@ class Account extends BaseAccount
         switch ($trans->status) {
         case Trans::PAY_STATUS_SUCCEEDED : {
             //从担保账号中退款,由于交易没有达成，分润也没有做，直接退款即可
-            $vouchAccount = UserAccount::findOne($vouchAccountId);
-            if (!$vouchAccount->minus($money)) {
+            $vouchAccount = $this->getVouchAccount();
+            if (!$vouchAccount->minus($money, $trans, '担保交易担保账号退款')) {
                 return false;
             }
             break;
         }
         case Trans::PAY_STATUS_FINISHED : {
-            //获取卖家账号，并退款
-            $sellerAccount = UserAccount::findOne($vouchAccountId);
-            if (!$sellerAccount->minus($money)) {
+            //获取卖家账号，并退款,如果卖方收款但是余额不足，无法退款。后期可以采用保证金方式，目前不支持此种退款
+            $sellerAccount = UserAccount::findOne($trans->to_uid);
+            if (!$sellerAccount->minus($money, $trans, '产品交易退款')) {
                 return false;
             }
             break;
         }
         default: {
+            $this->addError('display-error', '此种支付状态下的交易无法申请退款');
             return false;
         }
         }
@@ -542,7 +542,7 @@ class Account extends BaseAccount
 
         //为用户账户充值,充值成功即为一个事物，后续的购买判断在controller里面完成
         $userAccount = $this->getUserAccount($trans->to_uid);
-        if (!$userAccount->plus($trans->total_money, $trans->id, $trans->trans_type_id, '充值', '账户充值')) {
+        if (!$userAccount->plus($trans->total_money, $trans, '用户账户充值')) {
             return false;
         }
 

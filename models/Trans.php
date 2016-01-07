@@ -37,7 +37,8 @@ class Trans extends ActiveRecord
     const PAY_STATUS_FINISHED = 3;
     const PAY_STATUS_REFUNDED = 4;
 
-    //交易的类型，包含充值，提现和用户之间的交易（商家也属于用户中的一种），trans_type为单独一个表描述,初期可写死
+    //交易的类型，包含充值，提现和用户之间的交易（商家也属于用户中的一种），trans_type为单独一个表描述,初期可写死,数据
+    //库中可以固定写入下面三条记录
     const TRANS_TYPE_CHARGE = 1;
     const TRANS_TYPE_WITHDRAW = 2;
     const TRANS_TYPE_TRADE = 3;

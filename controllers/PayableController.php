@@ -130,11 +130,27 @@ class PayableController extends Controller
         $datas[] = $headerLables;
         foreach ($payables as $payable) {
             $data = [
-                $payable->id,
-                $payable->receive_uid,
-
-                $payable->money,
-
+                $payable->id, //企业参考号
+                $payable->receive_uid, //收款人编号
+                $payable->receiverBankAccount->account_no, //收款人银行卡号，
+                $payable->receiverBankAccount->account_name, //收款人姓名，
+                '', //开户支行可以为空
+                $payable->receiverBankAccount->province, //收款人所在省，
+                $payable->receiverBankAccount->city,    //收款人所在市
+                '', //邮件地址可为空
+                '', //收款人移动电话可为空
+                '', //币种可为空,
+                '', //付款分行
+                '普通', //结算方式
+                '', //业务种类
+                '', //付方账号
+                date('Ymd', $payable->updated_at+86400*2), //期望日
+                '', //期望时间
+                'Mr-Hug服务费', //用途
+                $payable->money, //金额
+                '', //收方行号
+                $payable->receiverBankAccount->bank_name, //收方开户银行
+                $payable->description, //业务摘要
             ];
             $userAccount = Yii::$app->account->getUserAccount($payable->uid);
             if (!$userAccount->processWithdrawPaying($payable, UserWithdraw::processWithdrawPaying)) {

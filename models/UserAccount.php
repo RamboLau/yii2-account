@@ -28,12 +28,12 @@ class UserAccount extends ActiveRecord
 {
 
     //账户类型,三种，普通账户，公司账户，银行账户,默认时普通用户账户
-    const ACCOUNT_TYPE_NORMAL = 1;              //个人普通账号
-    const ACCOUNT_TYPE_COMPANY = 2;            //公司类型账号，非自有公司
-    const ACCOUNT_TYPE_BANK = 3;               //银行账号
-    const ACCOUNT_TYPE_SELFCOMPANY_FEE = 4;    //公司手续费收费账号
-    const ACCOUNT_TYPE_SELFCOMPANY_PROFIT = 5; //利润账号
-    const ACCOUNT_TYPE_SELFCOMPANY_VOUCH = 6; //担保账号
+    const ACCOUNT_TYPE_NORMAL = 10;              //个人普通账号
+    const ACCOUNT_TYPE_COMPANY = 20;            //公司类型账号，非自有公司
+    const ACCOUNT_TYPE_SELFCOMPANY_PAY = 30;    //公司现金支付账号
+    const ACCOUNT_TYPE_SELFCOMPANY_FEE = 40;    //公司手续费收费账号
+    const ACCOUNT_TYPE_SELFCOMPANY_PROFIT = 50; //利润账号
+    const ACCOUNT_TYPE_SELFCOMPANY_VOUCH = 60; //担保账号
 
     //支出类型
 
@@ -108,8 +108,8 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/01 16:26:45
     **/
-    public function plus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
-        return $this->balance(static::BALANCE_TYPE_PLUS, $money, $transId, $transTypeId, $transTypeName, $description, $currency =1);
+    public function plus($money, $trans, $description, $currency = 1) {
+        return $this->balance(static::BALANCE_TYPE_PLUS, $money, $trans, $description, $currency =1);
     }
 
     /**
@@ -122,12 +122,12 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/04 22:57:20
     **/
-    public function minus($money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
+    public function minus($money, $trans, $description, $currency = 1) {
         if ($this->balance - $money < 0) {
             $this->addError('balance', '余额不足，无法支持操作');
             return false;
         }
-        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $transId, $transTypeId, $transTypeName, $description, $currency =1);
+        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $trans, $description, $currency =1);
     }
 
     /**
@@ -212,7 +212,7 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/30 14:39:00
     **/
-    public function balance($balanceType, $money, $transId, $transTypeId, $transTypeName,  $description, $currency = 1) {
+    public function balance($balanceType, $money, $trans, $description) {
 
         if ($balanceType === static::BALANCE_TYPE_PLUS) {
             $this->balance += $money;
@@ -225,17 +225,16 @@ class UserAccount extends ActiveRecord
             return false;
         }
 
-
         if ($this->save()) {
             //记录账单
             $bill = new Bill();
             $bill->uid = $this->uid;
-            $bill->trans_id = $transId;
-            $bill->trans_type_id = $transTypeId;
-            $bill->trans_type_name = $transTypeName;
+            $bill->trans_id = $trans->id;
+            $bill->trans_type_id = $trans->trans_type_id;
+            $bill->trans_type_name = $trans->transType->name;
             $bill->money = $money;
             $bill->balance_type = $balanceType;
-            $bill->currency = $currency;
+            $bill->currency = $trans->currency;
             $bill->description = $description;
             if (! $bill->save()) {
                 $this->addErrors($bill->getErrors());
@@ -246,7 +245,7 @@ class UserAccount extends ActiveRecord
             $accountLog = new UserAccountLog();
             $accountLog->uid = $this->uid;
             $accountLog->account_type = $this->type;
-            $accountLog->currency = $currency;
+            $accountLog->currency = $trans->currency;
             $accountLog->balance = $this->balance;
             $accountLog->deposit = $this->deposit;
             $accountLog->frozen_money = $this->frozen_money;
