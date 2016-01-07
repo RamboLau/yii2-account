@@ -148,3 +148,7 @@ create table `trans_refund_log` (
     `updated_at` int(10) not null default 0 comment '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易退款历史表';
 
+
+insert into trans_type(id, name, refundable) values(1, '充值', 0);
+insert into trans_type(id, name, refundable) values(2, '提现', 0);
+insert into trans_type(id, name, refundable) values(3, '交易', 1);
