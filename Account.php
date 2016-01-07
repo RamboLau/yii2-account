@@ -130,8 +130,8 @@ class Account extends BaseAccount
         }
 
         //仅用户之间的交易支持退款
-        if ($trans->type != Trans::TRANS_TYPE_TRADE) {
-            Yii::$app->warning('仅用户之间的交易支持退款');
+        if (! $trans->transType->refundable) {
+            Yii::$app->warning('此种交易不支持退款');
             return false;
         }
 
