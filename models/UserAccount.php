@@ -31,9 +31,9 @@ class UserAccount extends ActiveRecord
     const ACCOUNT_TYPE_NORMAL = 10;              //个人普通账号
     const ACCOUNT_TYPE_COMPANY = 20;            //公司类型账号，非自有公司
     const ACCOUNT_TYPE_SELFCOMPANY_PAY = 30;    //公司现金支付账号
-    const ACCOUNT_TYPE_SELFCOMPANY_FEE = 40;    //公司手续费收费账号
+    const ACCOUNT_TYPE_SELFCOMPANY_VOUCH = 40; //担保账号
     const ACCOUNT_TYPE_SELFCOMPANY_PROFIT = 50; //利润账号
-    const ACCOUNT_TYPE_SELFCOMPANY_VOUCH = 60; //担保账号
+    const ACCOUNT_TYPE_SELFCOMPANY_FEE = 60;    //公司手续费收费账号
 
     //支出类型
 
@@ -80,15 +80,16 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/17 11:15:12
     **/
-    public function createAccount($uid, $type = ACCOUNT_TYPE_NORMAL, $currency = 1) {
+    public static function createAccount($uid, $type = ACCOUNT_TYPE_NORMAL, $currency = 1) {
 
         $account = new static();
         $account->uid = $uid;
         $account->currency = $currency;
         $account->type = $type;
+        $account->is_enabled = 1;
 
         if ($account->save()) {
-            return true;
+            return $account;
         }
         else {
             return false;

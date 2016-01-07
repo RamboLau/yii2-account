@@ -69,15 +69,10 @@ class BaseAccount extends Component
         }
         $userAccount = UserAccount::findOne($uid);
         if (!$userAccount) {
-            $userAccount = new UserAccount();
-            $userAccount->uid = $uid;
-            $userAccount->balance = 0;
-            $userAccount->frozen_money = 0;
-            $userAccount->deposit = 0;
-            $userAccount->currency = 1; //默认只支持人民币
-            if (!$userAccount->save()) {
-                $this->addErrors($userAccount->getErrors());
-                return false; 
+            $userAccount = UserAccount::createAccount($uid, UserAccount::ACCOUNT_TYPE_SELFCOMPANY_NORMAL);
+            if (! $userAccount) {
+                $this->addError('display-error', '为用户开户失败');
+                return false;
             }
         }
         return  $userAccount;
@@ -150,7 +145,6 @@ class BaseAccount extends Component
      * @date 2016/01/07 12:07:47
     **/
     public function getFeeAccount() {
-
         $feeAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_FEE])->one();
         if (! $feeAccount) {
             throw new Exception('必须设置担保交易账号');

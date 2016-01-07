@@ -9,8 +9,8 @@ create table `user_account` (
     `deposit` decimal(16,2) not null default 0.00 comment '保证金', 
     `frozen_money` decimal(16,2) not null default 0.00 comment '冻结资金', 
     `pay_password` varchar(64) not null default '' comment '支付密码',
-    `last_balance_changed_ip` char(15) not null default '' comment '上次帐户余额更新ip',
-    `last_balance_changed_at` char(12) not null default '' comment '上次帐户结余变更时间',
+    `last_balance_changed_ip` int unsigned not null default 0 comment '上次帐户余额更新ip',
+    `last_balance_changed_at` int unsinged  not null default 0 comment '上次帐户结余变更时间',
     `created_at` int(10) unsigned not null default 0 comment '账户开启时间', 
     `updated_at` int(10) not null default 0 comment '账户更新时间',
     key uidx_uid_actype (`uid`, `type`, `currency`)
@@ -153,7 +153,20 @@ insert into trans_type(id, name, refundable) values(1, '充值', 0);
 insert into trans_type(id, name, refundable) values(2, '提现', 0);
 insert into trans_type(id, name, refundable) values(3, '交易', 1);
 
-alter table `trans_type` AUTO_INCREMENT=10000;
-alter table `user` AUTO_INCREMENT=100000;
+insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
+           values (1, '公司付款账号', '', '', '', '', '', '', '', '', 'Mr-Hug银行', '', '', '' );
+insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
+           values (100, '担保交易中间账号', '', '', '', '', '', '', '', '', 'Mr-Hug担保局', '', '', '' );
+insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
+           values (1000, '利润账号', '', '', '', '', '', '', '', '', 'Mr-Hug金库', '', '', '' );
+insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
+           values (10000, '手续费账号', '', '', '', '', '', '', '', '', 'Mr-Hug城管', '', '', '' );
 
+insert user_account(uid, type, currency, is_enabled) values(1, 30, 1, 1);
+insert user_account(uid, type, currency, is_enabled) values(100, 40, 1, 1);
+insert user_account(uid, type, currency, is_enabled) values(1000, 50, 1, 1);
+insert user_account(uid, type, currency, is_enabled) values(10000, 60, 1, 1);
+
+alter table `trans_type` AUTO_INCREMENT=100000;
+alter table `user` AUTO_INCREMENT=100000;
 
