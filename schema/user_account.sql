@@ -152,3 +152,8 @@ create table `trans_refund_log` (
 insert into trans_type(id, name, refundable) values(1, '充值', 0);
 insert into trans_type(id, name, refundable) values(2, '提现', 0);
 insert into trans_type(id, name, refundable) values(3, '交易', 1);
+
+alter table `trans_type` AUTO_INCREMENT=10000;
+alter table `user` AUTO_INCREMENT=100000;
+
+
