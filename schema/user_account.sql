@@ -154,13 +154,13 @@ insert into trans_type(id, name, refundable) values(2, '提现', 0);
 insert into trans_type(id, name, refundable) values(3, '交易', 1);
 
 insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
-           values (1, '公司付款账号', '', '', '', '', '', '', '', '', 'Mr-Hug银行', '', '', '' );
+           values (1, 'hug_pay_account', '', '', '', '', '', '', '', '', 'Mr-Hug银行', '', '', '' );
 insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
-           values (100, '担保交易中间账号', '', '', '', '', '', '', '', '', 'Mr-Hug担保局', '', '', '' );
+           values (100, 'hug_vouch_account', '', '', '', '', '', '', '', '', 'Mr-Hug担保局', '', '', '' );
 insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
-           values (1000, '利润账号', '', '', '', '', '', '', '', '', 'Mr-Hug金库', '', '', '' );
+           values (1000, 'hug_profit_account', '', '', '', '', '', '', '', '', 'Mr-Hug金库', '', '', '' );
 insert into `user`(uid, username, password, mobile, mobile_zone, tmp_password, salt, password_hash, password_reset_token, email, nickname, avator, hug_imgurl, live_place)
-           values (10000, '手续费账号', '', '', '', '', '', '', '', '', 'Mr-Hug城管', '', '', '' );
+           values (10000, 'hug_fee_account', '', '', '', '', '', '', '', '', 'Mr-Hug城管', '', '', '' );
 
 insert user_account(uid, type, currency, is_enabled) values(1, 30, 1, 1);
 insert user_account(uid, type, currency, is_enabled) values(100, 40, 1, 1);
