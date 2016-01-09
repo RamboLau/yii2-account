@@ -69,7 +69,7 @@ class BaseAccount extends Component
         }
         $userAccount = UserAccount::findOne($uid);
         if (!$userAccount) {
-            $userAccount = UserAccount::createAccount($uid, UserAccount::ACCOUNT_TYPE_SELFCOMPANY_NORMAL);
+            $userAccount = UserAccount::createAccount($uid, UserAccount::ACCOUNT_TYPE_NORMAL);
             if (! $userAccount) {
                 $this->addError('display-error', '为用户开户失败');
                 return false;
