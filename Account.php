@@ -138,6 +138,7 @@ class Account extends BaseAccount
         //如果已经在走退款流程，则直接抛出异常
         if ($trans->status === Trans::PAY_STATUS_REFUNDED) {
             Yii::$app->warning('退款已在进行中，或者已完成退款');
+            return false;
         }
 
         //根据交易的不同状态进行退款
@@ -145,7 +146,7 @@ class Account extends BaseAccount
         case Trans::PAY_STATUS_SUCCEEDED : {
             //从担保账号中退款,由于交易没有达成，分润也没有做，直接退款即可
             $vouchAccount = $this->getVouchAccount();
-            if (!$vouchAccount->minus($money, $trans, '担保交易担保账号退款')) {
+            if (!$vouchAccount->minus($trans->total_money, $trans, '担保交易担保账号退款')) {
                 return false;
             }
             break;
@@ -153,7 +154,7 @@ class Account extends BaseAccount
         case Trans::PAY_STATUS_FINISHED : {
             //获取卖家账号，并退款,如果卖方收款但是余额不足，无法退款。后期可以采用保证金方式，目前不支持此种退款
             $sellerAccount = $this->getUserAccount($trans->to_uid);
-            if (!$sellerAccount->minus($money, $trans, '产品交易退款')) {
+            if (!$sellerAccount->minus($trans->money, $trans, '产品交易退款')) {
                 return false;
             }
             break;
