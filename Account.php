@@ -451,6 +451,7 @@ class Account extends BaseAccount
         $receivable->trans_id = $trans->id;
         $receivable->uid = $trans->from_uid;
         $receivable->status = Receivable::PAY_STATUS_WAITPAY;
+        $receivable->description = 'Mr-Hug产品购买充值';
         //返回收款记录,用以跳转到第三方进行支付
         if ($receivable->save()) {
             return $receivable;
