@@ -38,7 +38,7 @@ class Account extends BaseAccount
         }
 
         //不论哪种交易模式，首先从用户账户扣款，扣款成功才有后续动作
-        if (!$buyerAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '交易扣款', '产品担保交易扣款')) {
+        if (!$buyerAccount->minus($trans->total_money, $trans, '产品担保交易扣款')) {
             return false;
         }
 
@@ -542,7 +542,7 @@ class Account extends BaseAccount
         }
 
         //为用户账户充值,充值成功即为一个事物，后续的购买判断在controller里面完成
-        $userAccount = $this->getUserAccount($trans->to_uid);
+        $userAccount = $this->getUserAccount($trans->from_uid);
         if (!$userAccount->plus($trans->total_money, $trans, '用户账户充值')) {
             return false;
         }

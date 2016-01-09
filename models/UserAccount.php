@@ -28,7 +28,7 @@ class UserAccount extends ActiveRecord
 {
 
     //账户类型,三种，普通账户，公司账户，银行账户,默认时普通用户账户
-    const ACCOUNT_TYPE_NORMAL = 10;              //个人普通账号
+    const ACCOUNT_TYPE_NORMAL = 1;              //个人普通账号
     const ACCOUNT_TYPE_COMPANY = 20;            //公司类型账号，非自有公司
     const ACCOUNT_TYPE_SELFCOMPANY_PAY = 30;    //公司现金支付账号
     const ACCOUNT_TYPE_SELFCOMPANY_VOUCH = 40; //担保账号
