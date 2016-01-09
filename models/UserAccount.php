@@ -157,7 +157,6 @@ class UserAccount extends ActiveRecord
         }
     }
 
-
     /**
      * @brief 解锁金额
      *
@@ -247,6 +246,7 @@ class UserAccount extends ActiveRecord
             $accountLog->uid = $this->uid;
             $accountLog->account_type = $this->type;
             $accountLog->currency = $trans->currency;
+            $accountLog->trans_id = $trans->id;
             $accountLog->balance = $this->balance;
             $accountLog->deposit = $this->deposit;
             $accountLog->frozen_money = $this->frozen_money;

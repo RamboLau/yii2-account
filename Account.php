@@ -90,7 +90,7 @@ class Account extends BaseAccount
         }
 
         //金额从担保账号转出
-        $vouchAccount = UserAccount::findOne($vouchAccountId);
+        $vouchAccount = $this->getVouchAccount();;
         if (!$vouchAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '担保交易', '担保交易账号转出完成购买')) {
             return false;
         }
@@ -152,7 +152,7 @@ class Account extends BaseAccount
         }
         case Trans::PAY_STATUS_FINISHED : {
             //获取卖家账号，并退款,如果卖方收款但是余额不足，无法退款。后期可以采用保证金方式，目前不支持此种退款
-            $sellerAccount = UserAccount::findOne($trans->to_uid);
+            $sellerAccount = $this->getUserAccount($trans->to_uid);
             if (!$sellerAccount->minus($money, $trans, '产品交易退款')) {
                 return false;
             }

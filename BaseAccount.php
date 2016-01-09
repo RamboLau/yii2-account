@@ -131,7 +131,7 @@ class BaseAccount extends Component
         if (! $profitAccount) {
             throw new Exception('必须设置利润账号');
         }
-        return $profitPayAccount;
+        return $profitAccount;
     }
 
     /**
@@ -166,19 +166,24 @@ class BaseAccount extends Component
 
         //收款账户处理逻辑
         $sellerAccount = UserAccount::findOne($trans->to_uid);
-        if (!$sellerAccount->plus($money, $trans, '产品售卖收入')) {
+        if (!$sellerAccount->plus($trans->money, $trans, '产品售卖收入')) {
             return false;
         }
 
         //分润账号处理逻辑
         if ($trans->profit > 0) {
-            return $this->processProfit('pay', $trans);
+            if (!$this->processProfit('pay', $trans)) {
+                $this->addError('display-error', '处理利润收入失败');
+                return false;
+            }
         }
 
         //手续费逻辑处理
         if ($trans->fee > 0) {
             return $this->processFee('pay', $trans);
         }
+
+        return true;
 
     }
 
@@ -226,15 +231,16 @@ class BaseAccount extends Component
         $profitAccount = $this->getProfitAccount();
         switch ($action) {
         case 'pay': {
-            $profitAccount->plus($money, $trans, '利润收入');
+            return $profitAccount->plus($trans->profit, $trans, '利润收入');
             break;
         }
         case 'refund': {
-            $profitAccount->minus($money, $trans, '利润退款');
+            return $profitAccount->minus($trans->profit, $trans, '利润退款');
             break;
         }
         default:break;
         }
+        return false;
     }
 
     /**
@@ -252,11 +258,11 @@ class BaseAccount extends Component
         $profitAccount = $this->getProfitAccount();
         switch ($action) {
         case 'pay': {
-            $profitAccount->plus($money, $trans, '手续费收入');
+            $profitAccount->plus($trans->fee, $trans, '手续费收入');
             break;
         }
         case 'refund': {
-            $profitAccount->minus($money, $trans, '手续费退款');
+            $profitAccount->minus($trans->fee, $trans, '手续费退款');
             break;
         }
         default:break;
