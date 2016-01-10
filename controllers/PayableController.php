@@ -2,7 +2,8 @@
 namespace frontend\controllers;
 
 use Yii;
-use yii\base\InvalidParamException;                                
+use yii\base\Exception; 
+use yii\base\InvalidParamException; 
 use yii\web\Controller;
 use yii\filters\VerbFilter;                                
 use yii\filters\AccessControl;                                
