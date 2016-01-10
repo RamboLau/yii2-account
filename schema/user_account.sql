@@ -167,6 +167,7 @@ insert user_account(uid, type, currency, is_enabled) values(100, 40, 1, 1);
 insert user_account(uid, type, currency, is_enabled) values(1000, 50, 1, 1);
 insert user_account(uid, type, currency, is_enabled) values(10000, 60, 1, 1);
 
+
 alter table `trans_type` AUTO_INCREMENT=100000;
 alter table `user` AUTO_INCREMENT=100000;
 

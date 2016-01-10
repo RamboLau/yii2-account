@@ -166,12 +166,15 @@ class AccountController extends WebController
                         return false;
                     }
                     //支付成功
-                    $this->redirect(['profile']);
-
+                    $this->data = [
+                        'pay_url'=>'',
+                        'need_pay'=>0,
+                        'channel_id'=>0,
+                    ];
                 }
                 else {
                     $transaction->rollback();
-                    Yii::$app->error('订单支付失败');
+                    return;
                 }
             }
             else {
@@ -206,6 +209,8 @@ class AccountController extends WebController
                 if ($qrCodeUrl) {
                     $this->data = [
                         'pay_url'=>$qrCodeUrl,
+                        'need_pay'=>1,
+                        'channel_id'=>$payForm->channel_id,
                     ];
                 }
                 else {
