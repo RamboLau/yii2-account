@@ -9,8 +9,10 @@ use yii\filters\AccessControl;
 use lubaogui\payment\models\PayChannel; 
 use common\models\Booking; 
 use lubaogui\payment\models\Payable; 
+use lubaogui\payment\models\PayableProcessBatch;
 use yii\web\UploadedFile;
 use lubaogui\excel\Excel;
+use common\models\UserWithdraw;
 
 /**
  * Payable controller
@@ -131,7 +133,14 @@ class PayableController extends Controller
 
         //第一行为title信息
         $datas[] = $headerLables;
+
+        $totalMoney = 0;
+        $payableCount = 0;
         foreach ($payables as $payable) {
+            
+            $totalMoney += $payable->money;
+            $payableCount += 1;
+
             $data = [
                 $payable->id, //企业参考号
                 $payable->receive_uid, //收款人编号
@@ -153,10 +162,11 @@ class PayableController extends Controller
                 $payable->money, //金额
                 '', //收方行号
                 $payable->receiverBankAccount->bank_name, //收方开户银行
-                $payable->description, //业务摘要
+                $payable->memo, //业务摘要
                 ];
-            $userAccount = Yii::$app->account->getUserAccount($payable->uid);
-            if (!$userAccount->processWithdrawPaying($payable, UserWithdraw::processWithdrawPaying)) {
+
+            $callbackFunc = [UserWithdraw::className(),'processPayingNotify'];
+            if (!Yii::$app->account->processWithdrawPaying($payable, $callbackFunc)) {
                 throw new Exception('提现下载出现错误，程序退出，请联系管理员');
             }
         }
@@ -171,7 +181,7 @@ class PayableController extends Controller
         }
 
         //处理相关的应付记录状态 
-        if (! Yii::$app->db->createCommand->update(Payable::tableName(),
+        if (! Yii::$app->db->createCommand()->update(Payable::tableName(),
             ['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)) {
                 $transaction->rollback(); 
                 return false;
