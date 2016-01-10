@@ -8,7 +8,7 @@ use yii\filters\VerbFilter;
 use yii\filters\AccessControl;                                
 use lubaogui\payment\models\PayChannel; 
 use common\models\Booking; 
-use lubaogui\account\models\Payable; 
+use lubaogui\payment\models\Payable; 
 use yii\web\UploadedFile;
 use lubaogui\excel\Excel;
 
@@ -104,23 +104,26 @@ class PayableController extends Controller
      * @date 2015/12/22 18:13:36
     **/
     public function actionDownload() {
-        
+
         $transaction = Yii::$app->db->beginTransaction();
         $payableConds = ['status'=>Payable::PAY_STATUS_WAITPAY];
         $payables = Payable::find()->where($payableConds)->indexBy('id')->all();
+        if (empty($payables)) {
+            throw new Exception('没有可供下载的记录');
+        }
 
         $meta = [
             'filename'=>'付款明细' . date('Y-m-d-H'),
-            'author'=>'Mr-Hug',
-            'modify_user'=>'Mr-Hug',
-            'title'=>'Mr-Hug付款明细',
-            'subject'=>'Mr-Hug付款明细',
-            'description'=>'Mr-Hug应付账款明细，用户提现明细',
-            'keywords'=>'Mr-Hug, 付款，银行转账',
-            'category'=>'银行转账'
-            ];
+                'author'=>'Mr-Hug',
+                'modify_user'=>'Mr-Hug',
+                'title'=>'Mr-Hug付款明细',
+                'subject'=>'Mr-Hug付款明细',
+                'description'=>'Mr-Hug应付账款明细，用户提现明细',
+                'keywords'=>'Mr-Hug, 付款，银行转账',
+                'category'=>'银行转账'
+                ];
 
-        $headerLables = ['企业参考号'，'收款人编号', '收款人账号', '收款人名称', '收方开户支行', '收款人所在省', 
+        $headerLables = ['企业参考号', '收款人编号', '收款人账号', '收款人名称', '收方开户支行', '收款人所在省', 
             '收款人所在市', '收方邮件地址', '收方移动电话', '币种', '付款分行', '结算方式', '业务种类', '付方账号',
             '期往日', '期望时间', '用途', '金额', '收方行号', '收方开户银行', '业务摘要'
             ];
@@ -151,40 +154,40 @@ class PayableController extends Controller
                 '', //收方行号
                 $payable->receiverBankAccount->bank_name, //收方开户银行
                 $payable->description, //业务摘要
-            ];
+                ];
             $userAccount = Yii::$app->account->getUserAccount($payable->uid);
             if (!$userAccount->processWithdrawPaying($payable, UserWithdraw::processWithdrawPaying)) {
                 throw new Exception('提现下载出现错误，程序退出，请联系管理员');
             }
         }
 
-        $excelConverter = new Excel();
-        if ($excelConverter->exportToExcel($dataArray)) {
-            $processBatch = new PayableProcessBatch();
-            $processBatch->total_money = $totalMoney;
-            $processBatch->count = $payableCount;
-            $processBatch->download_time = time();
-            if ($processBatch->save()) {
-                if (Yii::$app->db->createCommand->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)) {
-                    $transaction->commit();
-                    return true;
-                }
-                else {
-                    return false;
-                }
-            }
-            else {
-                $transaction->rollback();
-                return true;
-            }
-        }
-        else {
-            $transaction->rollback();
-            throw new Exception('写入excel文件出错');
+        $processBatch = new PayableProcessBatch(); 
+        $processBatch->total_money = $totalMoney;
+        $processBatch->count = $payableCount;
+        $processBatch->download_time = time();
+        if (!$processBatch->save()) { 
+            $transaction->rollback(); 
+            return false;
         }
 
+        //处理相关的应付记录状态 
+        if (! Yii::$app->db->createCommand->update(Payable::tableName(),
+            ['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)) {
+                $transaction->rollback(); 
+                return false;
+        }
+        $transaction->commit();  
+
+        $excelConverter = new Excel();
+        if ($excelConverter->exportToExcel($datas, $meta)) {
+            return true;
+        }
+        return false;
     }
 
+    public function actionRedownload() {
+
+    }
 
     /**
      * @brief 确认批量付款成功

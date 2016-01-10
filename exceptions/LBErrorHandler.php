@@ -5,11 +5,13 @@
  * @license http://www.yiiframework.com/license/
  */
 
-namespace lubaogui\account;
+namespace lubaogui\account\exceptions;
 
 use Yii;
 use yii\base\Exception;
 use yii\base\ErrorException;
+use yii\web\HttpException;
+use yii\web\Response;
 use yii\base\UserException;
 use yii\base\LBUserException;
 use yii\helpers\VarDumper;
@@ -64,7 +66,7 @@ class LBErrorHandler extends \yii\web\ErrorHandler
         }
 
         //$useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof UserException);
-        $response->format === Response::FORMAT_JSON;
+        $response->format = Response::FORMAT_JSON;
         $response->data = $this->convertExceptionToArray($exception);
 
         $response->send();
@@ -81,8 +83,9 @@ class LBErrorHandler extends \yii\web\ErrorHandler
             $exception = new HttpException(500, 'There was an error at the server.');
         }
         
+        $errorCode = $exception->getCode();
         $array = [
-            'code' => $exception->getCode(),
+            'code' => $errorCode ? $errorCode : 500,
             'message' => $exception->getMessage(),
         ];
         if ($exception instanceof LBUserException) {
