@@ -216,6 +216,33 @@ class PayableController extends Controller
         }
     }
 
+
+    /**
+     * @brief 所有的付款批次列表,同步渲染页面还是异步接口？貌似都可以
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/11 20:33:40
+    **/
+    public function actionBatchList() {
+        
+        $filterStatus = Yii::$app->request->get('status');
+        $filterConds = [];
+
+        if ($filterStatus) {
+            $filterConds = ['status'=>$filterStatus];
+        }
+
+        $query = PayableProcessBatch::find()->where($filterConds);
+        $pagnation = new Pagination(['totalCount' => $countQuery->count()]);
+
+
+
+    }
+
     /**
      * @brief 产生Excel文件
      *
