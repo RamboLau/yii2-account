@@ -26,24 +26,24 @@ class PayableController extends Controller
     {
         return [
             'access' => [
-                'class' => AccessControl::className(),
+            'class' => AccessControl::className(),
                 'only' => ['detail' ,'pay', 'charge'],
                 'rules' => [
-                     [
-                        'actions' => ['detail' ,'pay', 'charge'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
+                [
+                'actions' => ['detail' ,'pay', 'charge'],
+                'allow' => true,
+                'roles' => ['@'],
                 ],
-            ],
-            'verbs' => [
+                ],
+                ],
+                'verbs' => [
                 'class' => VerbFilter::className(),
-                'actions' => [
+                    'actions' => [
                     'charge' => ['post'],
                     'pay' => ['post'],
-                ],
-            ],
-        ];
+                    ],
+                    ],
+                    ];
     }
 
     /**
@@ -53,13 +53,13 @@ class PayableController extends Controller
     {
         return [
             'error' => [
-                'class' => 'common\actions\ApiErrorAction',
+            'class' => 'common\actions\ApiErrorAction',
             ],
             'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
+            'class' => 'yii\captcha\CaptchaAction',
+            'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
             ],
-        ];
+            ];
     }
 
 
@@ -72,7 +72,7 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2015/12/20 19:53:21
-    **/
+     **/
     public function actionDetail() {
 
         $userPayable = UserPayable::find()->select(['uid', 'currency', 'balance', 'frozon_money' ])->where(['uid'=>Yii::$app->user->identity['uid']]);
@@ -89,7 +89,7 @@ class PayableController extends Controller
      * @author 吕宝贵
      * @date 2015/12/08 22:35:12
 
-    **/
+     **/
     public function actionIndex()
     {
         $payables = Payable::find()->where()->indexBy('id')->all();
@@ -105,7 +105,7 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2015/12/22 18:13:36
-    **/
+     **/
     public function actionDownload() {
 
         $transaction = Yii::$app->db->beginTransaction();
@@ -135,7 +135,7 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2016/01/11 14:21:51
-    **/
+     **/
     public function actionRedownload() {
         $processBatchNo = Yii::$app->request->get('process_batch_no');
         if (!$processBatchNo) {
@@ -143,10 +143,13 @@ class PayableController extends Controller
         }
         $payables = Payable::find()->where(['process_batch_no'=>$processBatchNo])->indexBy('id')->all();
 
+        $transaction = Yii::$app->db->beginTransaction();
         $datasRet = $this->generateDatas($payables);
         if (empty($datasRet)) {
+            $transaction->rollback();
             throw new Exception('没有可供下载的记录');
         }
+        $transaction->commit();
         $datas = $datasRet['datas'];
         $meta = $datasRet['meta'];
 
@@ -166,13 +169,16 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2016/01/05 15:35:21
-    **/
+     **/
     public function actionConfirmBatchPay() {
         $batchProcessNo = Yii::$app->request->post('process_batch_no');
+        $transaction = Yii::$app->db->beginTransaction();
         if (Yii::$app->db->createCommand()->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])) {
+            $transaction->commit();
             return true;
         }
         else {
+            $transaction->rollback();
             return false;
         }
     }
@@ -186,7 +192,7 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2015/12/22 18:14:17
-    **/
+     **/
     public function actionImportFromExcel() {
         //获取文件
         $excelFile = UploadedFile::getInstanceByName('payedfile');
@@ -219,7 +225,7 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2016/01/11 14:34:57
-    **/
+     **/
     protected function generateDatas($payables) {
 
         if (empty($payables)) {
@@ -249,7 +255,7 @@ class PayableController extends Controller
         $totalMoney = 0;
         $payableCount = 0;
         foreach ($payables as $payable) {
-            
+
             $totalMoney += $payable->money;
             $payableCount += 1;
 
@@ -297,7 +303,7 @@ class PayableController extends Controller
             ['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)) {
                 $transaction->rollback(); 
                 return false;
-        }
+            }
         $transaction->commit();  
 
         return ['datas'=>$datas, 'meta'=>$meta];
