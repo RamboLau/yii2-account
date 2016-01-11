@@ -111,6 +111,118 @@ class PayableController extends Controller
         $transaction = Yii::$app->db->beginTransaction();
         $payableConds = ['status'=>Payable::PAY_STATUS_WAITPAY];
         $payables = Payable::find()->where($payableConds)->indexBy('id')->all();
+
+        $datasRet = $this->generateDatas($payables);
+        if (empty($datasRet)) {
+            throw new Exception('没有可供下载的记录');
+        }
+        $datas = $datasRet['datas'];
+        $meta = $datasRet['meta'];
+
+        $excelConverter = new Excel();
+        if ($excelConverter->exportToExcel($datas, $meta)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief 重新下载对应批次的Excel表格文件
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/11 14:21:51
+    **/
+    public function actionRedownload() {
+        $processBatchNo = Yii::$app->request->get('process_batch_no');
+        if (!$processBatchNo) {
+            throw new Exception('批次处理序号必须提供,process_batch_no', 1000);
+        }
+        $payables = Payable::find()->where(['process_batch_no'=>$processBatchNo])->indexBy('id')->all();
+
+        $datasRet = $this->generateDatas($payables);
+        if (empty($datasRet)) {
+            throw new Exception('没有可供下载的记录');
+        }
+        $datas = $datasRet['datas'];
+        $meta = $datasRet['meta'];
+
+        $excelConverter = new Excel();
+        if ($excelConverter->exportToExcel($datas, $meta)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief 确认批量付款成功
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/05 15:35:21
+    **/
+    public function actionConfirmBatchPay() {
+        $batchProcessNo = Yii::$app->request->post('process_batch_no');
+        if (Yii::$app->db->createCommand()->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    /**
+     * @brief 从银行返回的excel列表总导出支付成功和失败信息，用于后续处理,解冻，结算等。
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/22 18:14:17
+    **/
+    public function actionImportFromExcel() {
+        //获取文件
+        $excelFile = UploadedFile::getInstanceByName('payedfile');
+        if (! $excelFile) {
+            throw new Exception('获取上传文件失败');
+        }
+        $excelConverter = new Excel();
+        $payedItems = $excelConverter->importFromFile();
+
+        //循环处理支付结果，对有问题的结果写入文件，导出给用户,一天提取的款项默认不多，因此不需要做异步处理
+        foreach ($payedItems as $payedItem) {
+            if ($payedItem['status']) {
+                $payable = Payable::findOne($payedItem['id']);
+                $userAccount = Yii::$app->account->getUserAccount($payable->uid);
+                $callbackFunc = [UserWithdraw::className(),'processFinishPayNotify'];
+                if (!$userAccount->processWithdrawPaySuccess($payable->id,$callbackFunc)) {
+                    //将错误处理的信息记录下来
+
+                }
+            }
+        }
+    }
+
+
+    /**
+     * @brief 产生Excel文件
+     *
+     * @return  protected function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/11 14:34:57
+    **/
+    protected function generateDatas($payables) {
+
         if (empty($payables)) {
             throw new Exception('没有可供下载的记录');
         }
@@ -189,68 +301,8 @@ class PayableController extends Controller
         }
         $transaction->commit();  
 
-        $excelConverter = new Excel();
-        if ($excelConverter->exportToExcel($datas, $meta)) {
-            return true;
-        }
-        return false;
-    }
+        return ['datas'=>$datas, 'meta'=>$meta];
 
-    public function actionRedownload() {
-
-    }
-
-    /**
-     * @brief 确认批量付款成功
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/05 15:35:21
-    **/
-    public function actionConfirmBatchPay() {
-        $batchProcessNo = Yii::$app->request->post('process_batch_no');
-        if (Yii::$app->db->createCommand()->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-    /**
-     * @brief 从银行返回的excel列表总导出支付成功和失败信息，用于后续处理,解冻，结算等。
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/22 18:14:17
-    **/
-    public function actionImportFromExcel() {
-        //获取文件
-        $excelFile = UploadedFile::getInstanceByName('payedfile');
-        if (! $excelFile) {
-            throw new Exception('获取上传文件失败');
-        }
-        $excelConverter = new Excel();
-        $payedItems = $excelConverter->importFromFile();
-
-        //循环处理支付结果，对有问题的结果写入文件，导出给用户,一天提取的款项默认不多，因此不需要做异步处理
-        foreach ($payedItems as $payedItem) {
-            if ($payedItem['status']) {
-                $payable = Payable::findOne($payedItem['id']);
-                $userAccount = Yii::$app->account->getUserAccount($payable->uid);
-                $callbackFunc = [UserWithdraw::className(),'processFinishPayNotify'];
-                if (!$userAccount->processWithdrawPaySuccess($payable->id,$callbackFunc)) {
-                    //将错误处理的信息记录下来
-
-                }
-            }
-        }
     }
 
 }
