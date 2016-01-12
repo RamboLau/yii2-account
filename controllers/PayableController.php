@@ -11,6 +11,7 @@ use lubaogui\payment\models\PayChannel;
 use common\models\Booking; 
 use lubaogui\payment\models\Payable; 
 use lubaogui\payment\models\PayableProcessBatch;
+use lubaogui\payment\models\PayableProcessBatchSearch;
 use yii\web\UploadedFile;
 use lubaogui\excel\Excel;
 use common\models\UserWithdraw;
@@ -228,19 +229,15 @@ class PayableController extends Controller
      * @date 2016/01/11 20:33:40
     **/
     public function actionBatchList() {
-        
-        $filterStatus = Yii::$app->request->get('status');
-        $filterConds = [];
-
-        if ($filterStatus) {
-            $filterConds = ['status'=>$filterStatus];
-        }
-
-        $query = PayableProcessBatch::find()->where($filterConds);
-        $pagnation = new Pagination(['totalCount' => $countQuery->count()]);
-
-
-
+        $searchModel = new PayableProcessBatchSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $this->render(
+            'batch-list',
+            [
+            'searchModel'=>$searchModel,
+            'dataProvider'=>$dataProvider,
+            ],
+        )
     }
 
     /**
