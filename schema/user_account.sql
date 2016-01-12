@@ -10,9 +10,9 @@ create table `user_account` (
     `frozen_money` decimal(16,2) not null default 0.00 comment '冻结资金', 
     `pay_password` varchar(64) not null default '' comment '支付密码',
     `last_balance_changed_ip` int unsigned not null default 0 comment '上次帐户余额更新ip',
-    `last_balance_changed_at` int unsinged  not null default 0 comment '上次帐户结余变更时间',
+    `last_balance_changed_at` int unsigned  not null default 0 comment '上次帐户结余变更时间',
     `created_at` int(10) unsigned not null default 0 comment '账户开启时间', 
-    `updated_at` int(10) not null default 0 comment '账户更新时间',
+    `updated_at` int(10) unsigned not null default 0 comment '账户更新时间',
     key uidx_uid_actype (`uid`, `type`, `currency`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户现金账户表';
 
@@ -42,8 +42,8 @@ create table `trans_type` (
     `refundable` tinyint(1) unsigned not null  comment '是否可退款: 0 不可退款 1 可退款',
     `from_cat` tinyint(1) unsigned not null default 0 comment '流向目标分类: 0 本网站用户, 1 第三方支付机构 2 银行',
     `to_cat` tinyint(1) unsigned not null default 0 comment '流向目标分类: 0 本网站用户, 1 第三方支付机构 2 银行',
-    `created_at` int(10) not null default 0 comment '记录创建时间',
-    `updated_at` int(10) not null default 0 comment '记录更新时间'
+    `created_at` int(10) unsigned not null default 0 comment '记录创建时间',
+    `updated_at` int(10) unsigned not null default 0 comment '记录更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易分类表';
 
 
@@ -80,8 +80,8 @@ create table `trans` (
     `payed_at_ext` int(10) not null default 0 comment '外部支付完成时间',
     `confirmed_at` int(10) not null default 0 comment '交易确认时间戳,交易确认对担保交易有效,对于直接交易',
     `confirmed_at_ext` int(10) not null default 0 comment '外部交易确认时间',
-    `updated_at` int(10) not null default 0 comment '最后更新时间',
-    `updated_at_ext` int(10) not null default 0 comment '外部最后更新时间'
+    `updated_at` int(10) unsigned not null default 0 comment '最后更新时间',
+    `updated_at_ext` int(10) unsigned not null default 0 comment '外部最后更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易表';
 
 drop table if exists `trans_log`;
@@ -93,8 +93,8 @@ create table `trans_log` (
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币',
     `op_id` bigint unsigned not null default 1 comment '操作人员id',
     `memo` varchar(24)  not null default '' comment '备注',
-    `created_at` int(10) not null default 0 comment '记录创建时间'
-    `updated_at` int(10) not null default 0 comment '记录更新时间'
+    `created_at` int(10) unsigned not null default 0 comment '记录创建时间',
+    `updated_at` int(10) unsigned not null default 0 comment '记录更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易日志表';
 
 drop table if exists `bill`;
@@ -108,8 +108,8 @@ create table `bill` (
     `money` decimal(16,2) not null default 0.00 comment '账单金额',  
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币',
     `description` varchar(32) not null default '' comment '账单描述',
-    `created_at` int(10) not null default 0 comment '创建时间',
-    `updated_at` int(10) not null default 0 comment '更新时间',
+    `created_at` int(10) unsigned not null default 0 comment '创建时间',
+    `updated_at` int(10) unsigned not null default 0 comment '更新时间',
     key uidx_uid_trans (`uid`, `balance_type`),
     key uidx_uid_trans_tt (`uid`, `trans_type_id`, `balance_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='账单表';
@@ -127,8 +127,8 @@ create table `freeze` (
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币',
     `thawed_at` int(10) unsigned not null default 0 comment '实际解冻时间',
     `description` varchar(32) not null default '' comment '账单描述',
-    `created_at` int(10) not null default 0 comment '创建时间',
-    `updated_at` int(10) not null default 0 comment '创建时间',
+    `created_at` int(10) unsigned not null default 0 comment '创建时间',
+    `updated_at` int(10) unsigned not null default 0 comment '创建时间',
     key idx_trans (`trans_id`),
     key idx_sid (`source_id`),
     key uidx_uid_ct (`uid`, `created_at`),
@@ -144,8 +144,8 @@ create table `trans_refund_log` (
     `money` decimal(16,2) not null default 0.00 comment '冻结金额',  
     `currency` tinyint unsigned not null default 1 comment '币种: 1 人民币',
     `description` varchar(32) not null default '' comment '账单描述',
-    `created_at` int(10) not null default 0 comment '创建时间',
-    `updated_at` int(10) not null default 0 comment '创建时间'
+    `created_at` int(10) unsigned not null default 0 comment '创建时间',
+    `updated_at` int(10) unsigned not null default 0 comment '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='交易退款历史表';
 
 
