@@ -115,8 +115,10 @@ class PayableController extends Controller
 
         $datasRet = $this->generateDatas($payables);
         if (empty($datasRet)) {
+            $transaction->rollback();
             throw new Exception('没有可供下载的记录');
         }
+        $transaction->commit();
         $datas = $datasRet['datas'];
         $meta = $datasRet['meta'];
 
@@ -318,17 +320,14 @@ class PayableController extends Controller
         $processBatch->count = $payableCount;
         $processBatch->download_time = time();
         if (!$processBatch->save()) { 
-            $transaction->rollback(); 
             return false;
         }
 
         //处理相关的应付记录状态 
         if (! Yii::$app->db->createCommand()->update(Payable::tableName(),
             ['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)) {
-                $transaction->rollback(); 
                 return false;
-            }
-        $transaction->commit();  
+        }
 
         return ['datas'=>$datas, 'meta'=>$meta];
 
