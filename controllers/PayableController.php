@@ -311,8 +311,9 @@ class PayableController extends Controller
 
             $callbackFunc = [UserWithdraw::className(),'processPayingNotify'];
             if (!Yii::$app->account->processWithdrawPaying($payable, $callbackFunc)) {
-                throw new Exception('提现下载出现错误，程序退出，请联系管理员');
+                return false;
             }
+            $datas[] = $data;
         }
 
         $processBatch = new PayableProcessBatch(); 
