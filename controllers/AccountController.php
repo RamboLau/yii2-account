@@ -242,8 +242,10 @@ class AccountController extends WebController
         //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
         //此方法不妥，换为使用其他方法来判断支付channel_id
         $payChannelId = 1;
-        $this->processPayNotify($payChannelId);
-
+        if ($this->processPayNotify($payChannelId)) {
+            echo 'success';
+            exit;
+        }
     }
 
     /**
@@ -260,8 +262,10 @@ class AccountController extends WebController
         //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
         //此方法不妥，换为使用其他方法来判断支付channel_id
         $payChannelId = 2;
-        return $this->processPayNotify($payChannelId);
-
+        if ($this->processPayNotify($payChannelId)) {
+            echo 'OK';
+            exit;
+        }
     }
 
     /**
@@ -297,7 +301,7 @@ class AccountController extends WebController
                     $transOrder = Trans::findOne($trans->trans_id_ext);
                     if (!$transOrder) {
                         $transaction->rollback();
-                        return '无法找到订单';
+                        return false;
                     }
                     if (Yii::$app->account->pay($transOrder)) {
 
@@ -306,7 +310,7 @@ class AccountController extends WebController
                             $booking = Booking::findOne(['bid'=>$transOrder->trans_id_ext]);
                             if (! $booking) {
                                 $transaction->rollback();
-                                return '找不到订单了';
+                                return false;
                             }
 
                             $callbackData = [
@@ -316,7 +320,7 @@ class AccountController extends WebController
 
                             if (! Booking::processPaySuccess($callbackData)) {
                                 $transaction->rollback();
-                                return '订单保存失败';
+                                return false;
                             }
                         }
 
@@ -328,18 +332,16 @@ class AccountController extends WebController
                         //页面跳转逻辑
                     }
                 }
-                else {
-                    //成功页面跳转逻辑
-                }
             }
             else {
                 $transaction->rollback();
+                return true;
             }
         }
         catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
-        return 'OK';
+        return true;
 
     }
 
