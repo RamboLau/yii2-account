@@ -6,6 +6,7 @@ use yii\helpers\ArrayHelper;
 use lubaogui\account\BaseAccount;
 use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\Trans;
+use lubaogui\account\models\TransLog;
 use lubaogui\account\models\Freeze;
 use lubaogui\payment\Payment;
 use lubaogui\payment\models\Payable;
@@ -120,7 +121,7 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/11/30 10:32:54
      **/
-    public function refundTrans($transId) {
+    public function refundTrans($transId, $refundMoney) {
 
         $trans = Trans::findOne($transId);
         if (empty($trans)) {
@@ -141,6 +142,23 @@ class Account extends BaseAccount
             return false;
         }
 
+        //退款金额大小判断
+        if ($refundMoney > 0) {
+            //退款金额不能大于交易总金额
+            if ($refundMoney > $trans->total_money) {
+                $this->addError('display-error', '退款金额不能大于交易总金额');
+                return false;
+            }
+            else {
+                $trans->earnest_money = $trans->total_money - $refundMoney;
+                $trans->refunded_money =  $refundMoney;
+            }
+        }
+        else {
+            $this->addError('display-error', '退款金额输入不正确!');
+            return false;
+        }
+
         //根据交易的不同状态进行退款
         switch ($trans->status) {
         case Trans::PAY_STATUS_SUCCEEDED : {
@@ -149,10 +167,18 @@ class Account extends BaseAccount
             if (!$vouchAccount->minus($trans->total_money, $trans, '担保交易担保账号退款')) {
                 return false;
             }
+            //如果交易存在保证金，则直接在退款同时将保证金打款给hug
+            if ($trans->earnest_money > 0) {
+                $sellerAccount = $this->getUserAccount($trans->to_uid);
+                if (!$sellerAccount->plus($trans->earnest_money, $trans, '产品退款订金收入')) {
+                    return false;
+                }
+            }
             break;
         }
         case Trans::PAY_STATUS_FINISHED : {
             //获取卖家账号，并退款,如果卖方收款但是余额不足，无法退款。后期可以采用保证金方式，目前不支持此种退款
+            return false;
             $sellerAccount = $this->getUserAccount($trans->to_uid);
             if (!$sellerAccount->minus($trans->money, $trans, '产品交易退款')) {
                 return false;
@@ -167,7 +193,17 @@ class Account extends BaseAccount
 
         //对于finishRefundTrans,需要区分交易状态，SUCCEEDED状态只返还用户钱款即可，FINISHED状态需要退利润等
         if ($this->finishRefundTrans($trans)) {
-            return true;
+            $transLog = new TransLog();
+            $transLog->action = '交易退款';
+            $transLog->money = $refundMoney;
+            $transLog->currency = $trans->currency;
+            $transLog->trans_id = $trans->id;
+            if ($transLog->save()) {
+                return true;
+            }
+            else {
+                return false;
+            }
         }
         else {
             return false;
@@ -189,7 +225,6 @@ class Account extends BaseAccount
 
 
     }
-
 
     /**
      * @brief 冻结资金,在提现申请的时候，会冻结资金,如果用户取消，会取消冻结资金
@@ -450,7 +485,7 @@ class Account extends BaseAccount
 
         $receivable->money = $trans->total_money;
         $receivable->trans_id = $trans->id;
-        $receivable->uid = $trans->from_uid;
+        $receivable->from_uid = $trans->from_uid;
         $receivable->status = Receivable::PAY_STATUS_WAITPAY;
         $receivable->description = 'Mr-Hug产品购买充值';
         //返回收款记录,用以跳转到第三方进行支付

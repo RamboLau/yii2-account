@@ -62,7 +62,7 @@ class PayForm extends Model
         $trans->trans_type_id = Trans::TRANS_TYPE_TRADE;
         $trans->current = 1;
         $trans->total_money = $this->booking->price_final;
-        $trans->profit = $this->booking->price_sale_profit;
+        $trans->profit = $this->booking->price_for_platform;
         $trans->money = $trans->total_money - $trans->profit;
         //保证金，目前还没有上
         //$trans->earnest_money = $this->booking->earnest_money;
