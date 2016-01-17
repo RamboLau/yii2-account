@@ -262,10 +262,8 @@ class AccountController extends WebController
         //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
         //此方法不妥，换为使用其他方法来判断支付channel_id
         $payChannelId = 2;
-        if ($this->processPayNotify($payChannelId)) {
-            echo 'OK';
-            exit;
-        }
+        $this->processPayNotify($payChannelId)); 
+        
     }
 
     /**
