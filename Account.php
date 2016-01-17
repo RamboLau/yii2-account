@@ -92,7 +92,7 @@ class Account extends BaseAccount
 
         //金额从担保账号转出
         $vouchAccount = $this->getVouchAccount();;
-        if (!$vouchAccount->minus($trans->total_money, $trans->id, $trans->trans_type_id, '担保交易', '担保交易账号转出完成购买')) {
+        if (!$vouchAccount->minus($trans->total_money, $trans, '担保交易账号转出完成购买')) {
             return false;
         }
 
