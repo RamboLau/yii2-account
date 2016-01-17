@@ -60,7 +60,7 @@ class PayForm extends Model
         $trans = new Trans();
         $trans->pay_mode = Trans::PAY_MODE_VOUCHPAY;
         $trans->trans_type_id = Trans::TRANS_TYPE_TRADE;
-        $trans->current = 1;
+        $trans->currency = 1;
         $trans->total_money = $this->booking->price_final;
         $trans->profit = $this->booking->price_for_platform;
         $trans->money = $trans->total_money - $trans->profit;
