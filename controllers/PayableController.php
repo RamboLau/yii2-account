@@ -27,24 +27,24 @@ class PayableController extends Controller
     {
         return [
             'access' => [
-            'class' => AccessControl::className(),
-                'only' => ['detail' ,'pay', 'charge'],
-                'rules' => [
-                [
-                'actions' => ['detail' ,'pay', 'charge'],
-                'allow' => true,
-                'roles' => ['@'],
-                ],
-                ],
+                'class' => AccessControl::className(),
+                    'only' => ['detail' ,'pay', 'charge'],
+                    'rules' => [
+                        [
+                            'actions' => ['detail' ,'pay', 'charge'],
+                            'allow' => true,
+                            'roles' => ['@'],
+                        ],
+                    ],
                 ],
                 'verbs' => [
-                'class' => VerbFilter::className(),
-                    'actions' => [
-                    'charge' => ['post'],
-                    'pay' => ['post'],
+                    'class' => VerbFilter::className(),
+                        'actions' => [
+                            'charge' => ['post'],
+                            'pay' => ['post'],
+                        ],
                     ],
-                    ],
-                    ];
+                ];
     }
 
     /**
@@ -54,13 +54,13 @@ class PayableController extends Controller
     {
         return [
             'error' => [
-            'class' => 'common\actions\ApiErrorAction',
+                'class' => 'common\actions\ApiErrorAction',
             ],
             'captcha' => [
-            'class' => 'yii\captcha\CaptchaAction',
-            'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
+                'class' => 'yii\captcha\CaptchaAction',
+                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
             ],
-            ];
+        ];
     }
 
 
@@ -176,7 +176,10 @@ class PayableController extends Controller
     public function actionConfirmBatchPay() {
         $batchProcessNo = Yii::$app->request->post('process_batch_no');
         $transaction = Yii::$app->db->beginTransaction();
-        if (Yii::$app->db->createCommand()->update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])) {
+        if (Yii::$app->db->
+            createCommand()->
+            update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])->
+            execute() ) {
             $transaction->commit();
             return true;
         }
@@ -229,15 +232,15 @@ class PayableController extends Controller
      * @note 
      * @author 吕宝贵
      * @date 2016/01/11 20:33:40
-    **/
+     **/
     public function actionBatchList() {
         $searchModel = new PayableProcessBatchSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $this->render(
             'batch-list',
             [
-            'searchModel'=>$searchModel,
-            'dataProvider'=>$dataProvider,
+                'searchModel'=>$searchModel,
+                'dataProvider'=>$dataProvider,
             ],
         )
     }
@@ -267,12 +270,12 @@ class PayableController extends Controller
                 'description'=>'Mr-Hug应付账款明细，用户提现明细',
                 'keywords'=>'Mr-Hug, 付款，银行转账',
                 'category'=>'银行转账'
-                ];
+            ];
 
         $headerLables = ['企业参考号', '收款人编号', '收款人账号', '收款人名称', '收方开户支行', '收款人所在省', 
             '收款人所在市', '收方邮件地址', '收方移动电话', '币种', '付款分行', '结算方式', '业务种类', '付方账号',
             '期往日', '期望时间', '用途', '金额', '收方行号', '收方开户银行', '业务摘要'
-            ];
+        ];
         $datas = [];
 
         //第一行为title信息
@@ -307,7 +310,7 @@ class PayableController extends Controller
                 '', //收方行号
                 $payable->receiverBankAccount->bank_name, //收方开户银行
                 $payable->memo, //业务摘要
-                ];
+            ];
 
             $callbackFunc = [UserWithdraw::className(),'processPayingNotify'];
             if (!Yii::$app->account->processWithdrawPaying($payable, $callbackFunc)) {
@@ -325,8 +328,9 @@ class PayableController extends Controller
         }
 
         //处理相关的应付记录状态 
-        if (! Yii::$app->db->createCommand()->update(Payable::tableName(),
-            ['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)) {
+        if (! Yii::$app->db->createCommand()->
+            update(Payable::tableName(),['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)
+            ->execute()) {
                 return false;
         }
 
