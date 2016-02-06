@@ -314,9 +314,11 @@ class PayableController extends Controller
                 $payable->memo, //业务摘要
             ];
 
-            $callbackFunc = [UserWithdraw::className(),'processPayingNotify'];
-            if (!Yii::$app->account->processWithdrawPaying($payable, $callbackFunc)) {
-                return false;
+            if (!$processBatch) {
+                $callbackFunc = [UserWithdraw::className(),'processPayingNotify'];
+                if (!Yii::$app->account->processWithdrawPaying($payable, $callbackFunc)) {
+                    return false;
+                }
             }
             $datas[] = $data;
             $payableIds[] = $payable->id;
@@ -327,11 +329,11 @@ class PayableController extends Controller
             $processBatch->total_money = $totalMoney;
             $processBatch->count = $payableCount;
             $processBatch->download_time = time();
+            if (!$processBatch->save()) { 
+                return false;
+            }
         }
 
-        if (!$processBatch->save()) { 
-            return false;
-        }
 
         //处理相关的应付记录状态 
         if (! Yii::$app->db->createCommand()->
