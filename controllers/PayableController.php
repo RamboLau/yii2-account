@@ -241,8 +241,8 @@ class PayableController extends Controller
             [
                 'searchModel'=>$searchModel,
                 'dataProvider'=>$dataProvider,
-            ],
-        )
+            ]
+        );
     }
 
     /**
