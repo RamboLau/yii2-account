@@ -141,13 +141,14 @@ class PayableController extends Controller
      **/
     public function actionRedownload() {
         $processBatchNo = Yii::$app->request->get('process_batch_no');
-        if (!$processBatchNo) {
-            throw new Exception('批次处理序号必须提供,process_batch_no', 1000);
+        $processBatch = PayableProcessBatch::findOne($processBatchNo);
+        if (!$processBatchNo || !$processBatch) {
+            throw new Exception('批次处理序号必须提供或者必须存在,process_batch_no', 1000);
         }
         $payables = Payable::find()->where(['process_batch_no'=>$processBatchNo])->indexBy('id')->all();
 
         $transaction = Yii::$app->db->beginTransaction();
-        $datasRet = $this->generateDatas($payables);
+        $datasRet = $this->generateDatas($payables, $processBatch);
         if (empty($datasRet)) {
             $transaction->rollback();
             throw new Exception('没有可供下载的记录');
@@ -255,7 +256,7 @@ class PayableController extends Controller
      * @author 吕宝贵
      * @date 2016/01/11 14:34:57
      **/
-    protected function generateDatas($payables) {
+    protected function generateDatas($payables, $processBatch = null) {
 
         if (empty($payables)) {
             throw new Exception('没有可供下载的记录');
@@ -321,7 +322,10 @@ class PayableController extends Controller
             $payableIds[] = $payable->id;
         }
 
-        $processBatch = new PayableProcessBatch(); 
+        if (!$processBatch) {
+            $processBatch = new PayableProcessBatch(); 
+        }
+
         $processBatch->total_money = $totalMoney;
         $processBatch->count = $payableCount;
         $processBatch->download_time = time();
