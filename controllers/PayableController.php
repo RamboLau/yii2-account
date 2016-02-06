@@ -181,9 +181,9 @@ class PayableController extends Controller
             createCommand()->
             update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])->
             execute() ) {
-            $transaction->commit();
-            return true;
-        }
+                $transaction->commit();
+                return true;
+            }
         else {
             $transaction->rollback();
             return false;
@@ -324,11 +324,11 @@ class PayableController extends Controller
 
         if (!$processBatch) {
             $processBatch = new PayableProcessBatch(); 
+            $processBatch->total_money = $totalMoney;
+            $processBatch->count = $payableCount;
+            $processBatch->download_time = time();
         }
 
-        $processBatch->total_money = $totalMoney;
-        $processBatch->count = $payableCount;
-        $processBatch->download_time = time();
         if (!$processBatch->save()) { 
             return false;
         }
@@ -338,7 +338,7 @@ class PayableController extends Controller
             update(Payable::tableName(),['process_batch_no'=>$processBatch->id], ['id' => $payableIds])
             ->execute()) {
                 return false;
-        }
+            }
 
         return ['datas'=>$datas, 'meta'=>$meta];
 
