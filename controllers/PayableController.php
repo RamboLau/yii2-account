@@ -283,6 +283,7 @@ class PayableController extends Controller
 
         $totalMoney = 0;
         $payableCount = 0;
+        $payableIds = [];
         foreach ($payables as $payable) {
 
             $totalMoney += $payable->money;
@@ -317,6 +318,7 @@ class PayableController extends Controller
                 return false;
             }
             $datas[] = $data;
+            $payableIds[] = $payable->id;
         }
 
         $processBatch = new PayableProcessBatch(); 
@@ -329,7 +331,7 @@ class PayableController extends Controller
 
         //处理相关的应付记录状态 
         if (! Yii::$app->db->createCommand()->
-            update(Payable::tableName(),['status'=>Payable::PAY_STATUS_PAYING, 'process_batch_no'=>$processBatch->id], $payableConds)
+            update(Payable::tableName(),['process_batch_no'=>$processBatch->id], ['id' => $payableIds])
             ->execute()) {
                 return false;
         }
