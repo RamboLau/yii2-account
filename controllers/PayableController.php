@@ -176,14 +176,40 @@ class PayableController extends Controller
      **/
     public function actionConfirmBatchPay() {
         $batchProcessNo = Yii::$app->request->post('process_batch_no');
+        if (empty($batchProcessNo)) {
+            //添加处理逻辑或者页面
+            return false;
+        }
+        $payBatch = PayableProcessBatch::findOne($batchProcessNo); 
+        if (empty($payBatch)) {
+            //添加处理逻辑或者页面
+            return false;
+        }
+
         $transaction = Yii::$app->db->beginTransaction();
-        if (Yii::$app->db->
-            createCommand()->
-            update(Payable::tableName(), ['status'=>Payable::PAY_STATUS_FINISHED], ['process_batch_no'=>$batchProcessNo])->
-            execute() ) {
-                $transaction->commit();
-                return true;
+        $payeds = Payable::find()->where(['process_batch_no' => $payBatch->id])->all();
+        foreach ($payeds as $payable) {
+            $userAccount = Yii::$app->account->getUserAccount($payable->uid);
+            $callbackFunc = [UserWithdraw::className(), 'processFinishPayNotify'];
+            if (!$userAccount->processWithdrawPaySuccess($payable->id, $callbackFunc)) {
+                //将错误处理的信息记录下来
+                $transaction->rollback();
+                return false;
+
             }
+            $payable->status = Payable::PAY_STATUS_FINISHED;
+            if (!$payable->save()) {
+                $transaction->rollback();
+                //错误处理
+                return false;
+            }
+        }
+
+        if ($payBatch->save()) {
+            $transaction->commit();
+            //转换成页面显示错误
+            return true;
+        }
         else {
             $transaction->rollback();
             return false;
