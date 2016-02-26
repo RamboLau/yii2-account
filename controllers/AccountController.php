@@ -209,10 +209,10 @@ class AccountController extends WebController
                 }
 
                 //跳转到支付或者返回支付二维码地址
-                $qrCodeUrl = $payment->gotoPay($receivable, $returnType);
-                if ($qrCodeUrl) {
+                $returnData = $payment->gotoPay($receivable, $returnType);
+                if ($returnData) {
                     $this->data = [
-                        'pay_url'=>$qrCodeUrl,
+                        'pay_url'=>$returnData,
                         'need_pay'=>1,
                         'channel_id'=>$payForm->channel_id,
                     ];
