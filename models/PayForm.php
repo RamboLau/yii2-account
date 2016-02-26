@@ -17,6 +17,7 @@ class PayForm extends Model
     //预订id
     public $booking_id;
     public $channel_id;
+    public $is_mobile;
 
     private $booking;
 
@@ -37,7 +38,7 @@ class PayForm extends Model
         return [
             [['booking_id'], 'required'],
             [['booking_id'], 'integer'],
-            [['channel_id'], 'safe'],
+            [['channel_id', 'is_mobile'], 'safe'],
         ];
     }
 

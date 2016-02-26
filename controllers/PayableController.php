@@ -205,6 +205,7 @@ class PayableController extends Controller
             }
         }
 
+        $payBatch->status = PayableProcessBatch::BATCH_PAY_STATUS_FINISHED;
         if ($payBatch->save()) {
             $transaction->commit();
             //转换成页面显示错误

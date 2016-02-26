@@ -204,6 +204,10 @@ class AccountController extends WebController
                     $returnType = 'QRCodeUrl';
                 }
 
+                if ($payForm->is_mobile) {
+                    $returnType = 'AppRequestArray';
+                }
+
                 //跳转到支付或者返回支付二维码地址
                 $qrCodeUrl = $payment->gotoPay($receivable, $returnType);
                 if ($qrCodeUrl) {
