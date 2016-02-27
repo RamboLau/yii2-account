@@ -271,6 +271,23 @@ class AccountController extends WebController
     }
 
     /**
+     * @brief 移动端支付成功回调
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/02/27 22:22:32
+    **/
+    public function actionWechatAppPayNotify() {
+        //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
+        Yii::info('进入微信支付回调', 'account-pay-notify');
+        $payChannelId = 2;
+        $this->processPayNotify($payChannelId, true); 
+    }
+
+    /**
      * @brief 处理充值消息通知的action,对于notify来讲，不需要做页面跳转，只需要针对不同的支付方式返回对应的状态
      *
      * @return  public function
@@ -280,7 +297,7 @@ class AccountController extends WebController
      * @author 吕宝贵
      * @date 2015/12/09 23:30:24
     **/
-    protected function processPayNotify($payChannelId) {
+    protected function processPayNotify($payChannelId, $isMobile = false) {
 
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payment = new Payment($channels[$payChannelId]['alias']);
