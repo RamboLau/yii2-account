@@ -312,7 +312,7 @@ class AccountController extends WebController
         //业务逻辑都在handlers中实现
         try {
             $trans = null;
-            if ($trans = $payment->processNotify($handlers)) {
+            if ($trans = $payment->processNotify($handlers, $isMobile)) {
                 $transaction->commit();
                 //上面是用户充值成功逻辑，如果交易存在关联的交易，则查询关联交易的信息，并尝试支付
                 Yii::info('成功处理用户充值逻辑', 'account-pay-notify');
