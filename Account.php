@@ -523,6 +523,7 @@ class Account extends BaseAccount
         $transCharge->to_uid = $trans->to_uid;
         //所有充值交易都为直接交易
         $transCharge->pay_mode = Trans::PAY_MODE_DIRECTPAY;
+        $transCharge->money = $trans->total_money;
         $transCharge->total_money = $trans->total_money - $userAccount->balance;
 
         if (! $transCharge->save()) {
