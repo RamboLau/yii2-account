@@ -284,7 +284,7 @@ class AccountController extends WebController
         //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
         Yii::info('进入微信支付回调', 'account-pay-notify');
         $payChannelId = 2;
-        $this->processPayNotify($payChannelId, true); 
+        $this->processPayNotify($payChannelId); 
     }
 
     /**
@@ -300,6 +300,7 @@ class AccountController extends WebController
     protected function processPayNotify($payChannelId) {
 
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
+        //回调的时候，appId根据返回的参数来确定
         $payment = new Payment($channels[$payChannelId]['alias']);
         //设置支付的成功和失败回调函数
         $handlers = [
@@ -307,12 +308,19 @@ class AccountController extends WebController
             'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
             ];
 
-        $transaction = Yii::$app->db->beginTransaction();
+        //判断订单是否支付成功, 如果成功则进入成功处理逻辑
+        if ($payment->checkPayStatus() === false) {
+            $this->code = 1;
+            $this->message = '支付结果检查失败';
+            return false;
+        }
 
+        $transaction = Yii::$app->db->beginTransaction();
         //业务逻辑都在handlers中实现
         try {
             $trans = null;
-            if ($trans = $payment->processNotify($handlers, $isMobile)) {
+            //业务逻辑处理，此处应当判断订单是否成功
+            if ($trans = $payment->processNotify($handlers)) {
                 $transaction->commit();
                 //上面是用户充值成功逻辑，如果交易存在关联的交易，则查询关联交易的信息，并尝试支付
                 Yii::info('成功处理用户充值逻辑', 'account-pay-notify');
@@ -326,7 +334,6 @@ class AccountController extends WebController
                         return false;
                     }
                     if (Yii::$app->account->pay($transOrder)) {
-
                         //如果关联交易为产品购买
                         if ($transOrder->trans_type_id == Trans::TRANS_TYPE_TRADE) {
                             $booking = Booking::findOne(['bid'=>$transOrder->trans_id_ext]);
@@ -340,7 +347,6 @@ class AccountController extends WebController
                                 'bid' =>$booking->bid ,
                                 'trans_id' => $booking->trans_id,
                                 ];
-
                             if (! Booking::processPaySuccess($callbackData)) {
                                 $transaction->rollback();
                                 Yii::warning('关联预订处理操作失败', 'account-pay-notify');
@@ -348,7 +354,6 @@ class AccountController extends WebController
                             }
                             Yii::info('关联预订相关回调处理成功', 'account-pay-notify');
                         }
-
                         $transaction->commit();
                         Yii::info('提交事务...', 'account-pay-notify');
                         //页面跳转逻辑
