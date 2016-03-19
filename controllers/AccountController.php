@@ -145,6 +145,7 @@ class AccountController extends WebController
 
             //根据form产生trans,trans处于未支付状态
             $transaction = Yii::$app->db->beginTransaction();
+            //获取用户
             $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity->uid);
 
             $trans = null;
@@ -160,17 +161,18 @@ class AccountController extends WebController
                     //回调预订中的成功支付函数
                     if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
                         $transaction->commit();
+                        //支付成功
+                        $this->data = [
+                            'pay_url'=>'',
+                            'need_pay'=>0,
+                            'channel_id'=>0,
+                            ];
+                        return;
                     }
                     else {
                         $transaction->rollback();
                         return false;
                     }
-                    //支付成功
-                    $this->data = [
-                        'pay_url'=>'',
-                        'need_pay'=>0,
-                        'channel_id'=>0,
-                    ];
                 }
                 else {
                     $transaction->rollback();
@@ -194,22 +196,20 @@ class AccountController extends WebController
                 }
 
                 //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
-                $payment = new Payment();
                 $payChannel = PayChannel::findOne($payForm->channel_id);
 
-                //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
-                $payment = new Payment($payChannel->alias);
-                $returnType = null;
-                if ($payChannel->alias == 'wechatpay') {
-                    $returnType = 'QRCodeUrl';
+                //根据是否是移动端支付，决定传给payment的options参数
+                $payOptions['app_id'] = 'wechatpay-native';
+                if ($payForm->is_mobile) {
+                    $payOptions['app_id'] = 'wechatpay-app';
                 }
 
-                if ($payForm->is_mobile) {
-                    $returnType = 'AppRequestArray';
-                }
+                //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
+                $payment = new Payment($payChannel->alias, $payOptions);
 
                 //跳转到支付或者返回支付二维码地址
-                $returnData = $payment->gotoPay($receivable, $returnType);
+                $returnData = $payment->generateRequestParams($receivable);
+
                 if ($returnData) {
                     $this->data = [
                         'pay_url'=>$returnData,
@@ -297,7 +297,7 @@ class AccountController extends WebController
      * @author 吕宝贵
      * @date 2015/12/09 23:30:24
     **/
-    protected function processPayNotify($payChannelId, $isMobile = false) {
+    protected function processPayNotify($payChannelId) {
 
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payment = new Payment($channels[$payChannelId]['alias']);
