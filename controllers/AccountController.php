@@ -141,93 +141,90 @@ class AccountController extends WebController
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payForm = new PayForm();
         $requestParams = array_merge(Yii::$app->request->get(), Yii::$app->request->post());
-        if ($payForm->load($requestParams, '')) {
 
-            //根据form产生trans,trans处于未支付状态
-            $transaction = Yii::$app->db->beginTransaction();
-            //获取用户
-            $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity->uid);
-
-            $trans = null;
-            if (! $trans = $payForm->getTrans()) {
-                $transaction->rollback();
-                throw new Exception(json_encode($payForm->getErrors()));
-            }
-
-            //如果账户余额大于交易的总金额，则直接支付
-            $callbackData = ['bid'=>$payForm->booking_id, 'trans_id'=>$trans->id];
-            if ($userAccount->balance >= $trans->total_money) {
-                if (Yii::$app->account->pay($trans)) {
-                    //回调预订中的成功支付函数
-                    if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
-                        $transaction->commit();
-                        //支付成功
-                        $this->data = [
-                            'pay_url'=>'',
-                            'need_pay'=>0,
-                            'channel_id'=>0,
-                            ];
-                        return;
-                    }
-                    else {
-                        $transaction->rollback();
-                        return false;
-                    }
-                }
-                else {
-                    $transaction->rollback();
-                    return;
-                }
-            }
-            else {
-
-                if (! $receivable = Yii::$app->account->generateReceivableAndChargeTrans($trans, $userAccount)) {
-                    $transaction->rollback();
-                    throw new Exception('生成充值订单出错');
-                }
-                else {
-                    if (call_user_func([Booking::className(), 'processGenTransSuccess'], $callbackData)) {
-                        $transaction->commit();
-                    }
-                    else {
-                        $transaction->rollback();
-                        throw new Exception('生成支付信息出错');
-                    }
-                }
-
-                //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
-                $payChannel = PayChannel::findOne($payForm->channel_id);
-
-                //根据是否是移动端支付，决定传给payment的options参数
-                $payOptions['app_id'] = 'wechatpay-native';
-                if ($payForm->is_mobile) {
-                    $payOptions['app_id'] = 'wechatpay-app';
-                }
-
-                //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
-                $payment = new Payment($payChannel->alias, $payOptions);
-
-                //跳转到支付或者返回支付二维码地址
-                $returnData = $payment->generateRequestParams($receivable);
-
-                if ($returnData) {
-                    $this->data = [
-                        'pay_url'=>$returnData,
-                        'need_pay'=>1,
-                        'channel_id'=>$payForm->channel_id,
-                    ];
-                }
-                else {
-                    throw new Exception('支付失败');
-                }
-            }
-        }
-        else {
+        if (!$payForm->load($requestParams, '')) {
             //如果用户没有提交支付，则认为是需要渲染页面
             return $this->render('pay',[
                 'model' => $payForm,
                 'channels'=>$channels,
-            ]);
+                ]);
+        }
+
+        //根据form产生trans,trans处于未支付状态
+        $transaction = Yii::$app->db->beginTransaction();
+        $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity->uid);
+
+        $trans = null;
+        if (! $trans = $payForm->getTrans()) {
+            $transaction->rollback();
+            throw new Exception(json_encode($payForm->getErrors()));
+        }
+
+        //如果账户余额大于交易的总金额，则直接支付
+        $callbackData = ['bid'=>$payForm->booking_id, 'trans_id'=>$trans->id];
+        if ($userAccount->balance >= $trans->total_money) {
+            if (Yii::$app->account->pay($trans)) {
+                //回调预订中的成功支付函数
+                if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
+                    $transaction->commit();
+                    //支付成功
+                    $this->data = [
+                        'pay_url'=>'',
+                        'need_pay'=>0,
+                        'channel_id'=>0,
+                        ];
+                    return;
+                }
+                else {
+                    $transaction->rollback();
+                    //此处需要设置错误信息
+                    return ;
+                }
+            }
+            else {
+                $transaction->rollback();
+                return;
+            }
+        }
+
+        if (! $receivable = Yii::$app->account->generateReceivableAndChargeTrans($trans, $userAccount)) {
+            $transaction->rollback();
+            throw new Exception('生成充值订单出错');
+        }
+        else {
+            if (call_user_func([Booking::className(), 'processGenTransSuccess'], $callbackData)) {
+                $transaction->commit();
+            }
+            else {
+                $transaction->rollback();
+                throw new Exception('生成支付信息出错');
+            }
+        }
+
+        //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
+        $payChannel = PayChannel::findOne($payForm->channel_id);
+
+        //根据是否是移动端支付，决定传给payment的options参数
+        $payOptions['app_id'] = 'wechatpay-native';
+        if ($payForm->is_mobile) {
+            $payOptions['app_id'] = 'wechatpay-app';
+        }
+
+        //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html
+        $payment = new Payment($payChannel->alias, $payOptions);
+
+        //跳转到支付或者返回支付二维码地址
+        $returnData = $payment->generateRequestParams($receivable);
+
+        if ($returnData) {
+            $this->data = [
+                'pay_url'=>$returnData,
+                'need_pay'=>1,
+                'channel_id'=>$payForm->channel_id,
+                ];
+        }
+        else {
+            throw new Exception('支付失败');
         }
 
     }
