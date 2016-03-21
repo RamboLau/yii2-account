@@ -18,26 +18,30 @@ use yii\base\UserException;
  */
 class LBUserException extends UserException
 {
+
+    //$_errors保存需要返回给客户端的错误信息，在接口api中特别有用, 如果models有错误信息
     private $_errors;
 
     /**
-     * @brief 设置错误信息
+     * @brief 构建一个异常,errors代表携带的错误信息
      *
-     * @return  public function 
      * @retval   
      * @see 
      * @note 
      * @author 吕宝贵
      * @date 2016/03/20 16:25:18
     **/
-    public function setErrors($errors) {
+    public function __construct($message, $code = 1, $errors = null, $previous = null) {
+
         if (!empty($errors)) {
             $this->_errors = $errors;
         }
+        parent::__construct($message, $code, $previous); 
+
     }
 
     /**
-     * @brief 获取i错误信息
+     * @brief 获取错误信息
      *
      * @return  array 错误信息数组 
      * @retval   

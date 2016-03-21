@@ -60,6 +60,7 @@ class LBErrorHandler extends \yii\base\ErrorHandler
             $transaction->rollback();
         }
 
+        //对返回内容进行渲染
         if (Yii::$app->has('response')) {
             $response = Yii::$app->getResponse();
 
