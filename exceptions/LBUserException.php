@@ -18,32 +18,28 @@ use yii\base\UserException;
  */
 class LBUserException extends UserException
 {
-    private $errors;
-    private $responseFormat;
+    private $_errors;
 
     /**
-     * @brief 异常实例初始化
+     * @brief 设置错误信息
      *
-     * @param [in/out] $errors : array
      * @return  public function 
      * @retval   
      * @see 
      * @note 
      * @author 吕宝贵
-     * @date 2016/01/02 11:53:01
+     * @date 2016/03/20 16:25:18
     **/
-    public function __construct($displayErrMsg, $errorCode, array $errors = [])  {
-
-        if (! empty($errors)) {
-            $this->errors = $errors;
+    public function setErrors($errors) {
+        if (!empty($errors)) {
+            $this->_errors = $errors;
         }
-
-    }  
+    }
 
     /**
-     * @brief 设置错误信息，该错误信息
+     * @brief 获取i错误信息
      *
-     * @return  public function 
+     * @return  array 错误信息数组 
      * @retval   
      * @see 
      * @note 
@@ -51,6 +47,7 @@ class LBUserException extends UserException
      * @date 2016/01/02 12:40:24
     **/
     public function getErrors() {
-        return $this->errors;
+        return $this->_errors;
     }
+
 }

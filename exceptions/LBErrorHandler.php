@@ -29,7 +29,7 @@ use yii\helpers\VarDumper;
  * @author Timur Ruziev <resurtm@gmail.com>
  * @since 2.0
  */
-class LBErrorHandler extends \yii\web\ErrorHandler
+class LBErrorHandler extends \yii\base\ErrorHandler
 {
 
     /**
@@ -53,8 +53,21 @@ class LBErrorHandler extends \yii\web\ErrorHandler
      */
     protected function renderException($exception)
     {
+
+        //如果存在未提交的事务，则对事务进行回滚
+        $transaction = Yii::$app->db->getTransaction();
+        if ($transaction) {
+            $transaction->rollback();
+        }
+
         if (Yii::$app->has('response')) {
             $response = Yii::$app->getResponse();
+
+            //对于返回json或者xml的请求，不能返回500状态，而是在返回接口中定义错误
+            if ($response->format === Response::FORMAT_JSON || $response->format === Response::FORMAT_XML) {
+                $response->setStatusCode(200);
+            }
+
             // reset parameters of response to avoid interference with partially created response data
             // in case the error occurred while sending the response.
             $response->isSent = false;
@@ -64,10 +77,6 @@ class LBErrorHandler extends \yii\web\ErrorHandler
         } else {
             $response = new Response();
         }
-
-        //$useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof UserException);
-        $response->format = Response::FORMAT_JSON;
-        $response->data = $this->convertExceptionToArray($exception);
 
         $response->send();
     }

@@ -20,18 +20,7 @@ use yii\helpers\ArrayHelper;
  */
 class WebController extends Controller
 {
-    protected $requestParams = [];
-    protected $headers = [];
-    protected $webroot = "";
-    protected $user = 0;
-    protected $uid = 0;
-    public $code = 0;
-    public $message = '';
-    public $data = [];
-    public $meta = [];
-    // 图片文件存储相对路径
-    static $imageFilePath = '/img/';
-    
+
     /**
      * @inheritdoc
      */
