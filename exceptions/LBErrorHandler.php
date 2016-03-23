@@ -78,6 +78,19 @@ class LBErrorHandler extends \yii\base\ErrorHandler
         } else {
             $response = new Response();
         }
+        $useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof LBUserException);
+
+        //如果是用户定义的异常，则需要将异常错误信息抛出,如果是接口类型的并且有model类型的错误
+        if ($useErrorView && $this->errorAction !== null) {
+            $result = Yii::$app->runAction($this->errorAction); 
+            if ($result instanceof Response) { 
+                $result = $result;
+            } else { 
+                $result->data = $result;
+            }
+        }
+
+
 
         $response->send();
     }
