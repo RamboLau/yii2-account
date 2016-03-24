@@ -64,11 +64,6 @@ class LBErrorHandler extends \yii\base\ErrorHandler
         if (Yii::$app->has('response')) {
             $response = Yii::$app->getResponse();
 
-            //对于返回json或者xml的请求，不能返回500状态，而是在返回接口中定义错误
-            if ($response->format === Response::FORMAT_JSON || $response->format === Response::FORMAT_XML) {
-                $response->setStatusCode(200);
-            }
-
             // reset parameters of response to avoid interference with partially created response data
             // in case the error occurred while sending the response.
             $response->isSent = false;
@@ -78,19 +73,32 @@ class LBErrorHandler extends \yii\base\ErrorHandler
         } else {
             $response = new Response();
         }
-        $useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG || $exception instanceof LBUserException);
+
+        $useErrorView = $response->format === Response::FORMAT_HTML && (!YII_DEBUG);
 
         //如果是用户定义的异常，则需要将异常错误信息抛出,如果是接口类型的并且有model类型的错误
-        if ($useErrorView && $this->errorAction !== null) {
-            $result = Yii::$app->runAction($this->errorAction); 
-            if ($result instanceof Response) { 
-                $result = $result;
-            } else { 
-                $result->data = $result;
+        if ($userErrorView) {
+            if ($this->errorAction !=== null) {
+                $result = Yii::$app->runAction($this->errorAction); 
+                if ($result instanceof Response) { 
+                    $result = $result;
+                } else { 
+                    $result->data = $result;
+                }
+            }
+            else {
+                //在没有默认异常处理action的情况下，直接渲染文件
+                $file = $useErrorView ? $this->errorView : $this->exceptionView; 
+                $responseData = $this->renderFile($file, 'exception'=>$exception);
             }
         }
+        else {
 
-
+        }
+    
+        if (!YII_DEBUG) {
+            $response->setStatusCode(200);
+        }
 
         $response->send();
     }
