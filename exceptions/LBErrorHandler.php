@@ -93,11 +93,26 @@ class LBErrorHandler extends \yii\base\ErrorHandler
             }
         }
         else {
-
+            if ($response->format === Response::FORMAT_JSON || $response->format === Response::FORMAT_XML) {
+                $response->data = [
+                    'code' => $exception->getCode(),
+                        'message' => $exception->getMessage(),
+                        ];
+                if ($exception instanceof LBUserException) {
+                    $response->data['errors'] = $exception->getErrors();
+                }
+            }
+            else {
+                $response->data = $this->convertExceptionToArray($exception);
+            }
         }
     
-        if (!YII_DEBUG) {
+        //调试状态状态码为500, 非调试状态不抛出异常 
+        if (!YII_DEBUG || $exception instanceof LBUserException) {
             $response->setStatusCode(200);
+        }
+        else {
+            $response->setStatusCode(500);
         }
 
         $response->send();
