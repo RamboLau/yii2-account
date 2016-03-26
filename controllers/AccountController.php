@@ -299,11 +299,7 @@ class AccountController extends WebController
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         //回调的时候，appId根据返回的参数来确定
         $payment = new Payment($channels[$payChannelId]['alias']);
-        //设置支付的成功和失败回调函数
-        $handlers = [
-            'paySuccessHandler'=>[Yii::$app->account, 'processChargePaySuccess'],
-            'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
-            ];
+
 
         //判断订单是否支付成功, 如果成功则进入成功处理逻辑
         if ($payment->checkPayStatus() === false) {
@@ -311,65 +307,71 @@ class AccountController extends WebController
             exit;
         }
 
+        //如果checkPayStatus返回成功，代表支付成功，此时进行实际的业务处理
         $transaction = Yii::$app->db->beginTransaction();
-        //业务逻辑都在handlers中实现
-        try {
-            $trans = null;
-            //业务逻辑处理，此处应当判断订单是否成功
-            if ($trans = $payment->processNotify($handlers)) {
-                $transaction->commit();
-                //上面是用户充值成功逻辑，如果交易存在关联的交易，则查询关联交易的信息，并尝试支付
-                Yii::info('成功处理用户充值逻辑', 'account-pay-notify');
-                if ($trans->trans_id_ext) {
-                    Yii::info('存在关联交易，处理关联交易逻辑', 'account-pay-notify');
-                    $transaction = Yii::$app->db->beginTransaction();
-                    $transOrder = Trans::findOne($trans->trans_id_ext);
-                    if (!$transOrder) {
-                        $transaction->rollback();
-                        Yii::warning('关联交易查询失败, 退出购买逻辑', 'account-pay-notify');
-                        throw new LBUserException('关联交易查询失败，退出购买逻辑', 2);
-                        exit;
-                    }
-                    if (Yii::$app->account->pay($transOrder)) {
-                        //如果关联交易为产品购买
-                        if ($transOrder->trans_type_id == Trans::TRANS_TYPE_TRADE) {
-                            $booking = Booking::findOne(['bid'=>$transOrder->trans_id_ext]);
-                            if (! $booking) {
-                                $transaction->rollback();
-                                Yii::warning('查询关联预订失败', 'account-pay-notify');
-                                return false;
-                            }
-                            Yii::info('关联预订信息获取成功', 'account-pay-notify');
-                            $callbackData = [
-                                'bid' =>$booking->bid ,
-                                'trans_id' => $booking->trans_id,
-                                ];
-                            if (! Booking::processPaySuccess($callbackData)) {
-                                $transaction->rollback();
-                                Yii::warning('关联预订处理操作失败', 'account-pay-notify');
-                                return false;
-                            }
-                            Yii::info('关联预订相关回调处理成功', 'account-pay-notify');
+
+        //设置支付的成功和失败回调函数
+        $handlers = [
+            'paySuccessHandler'=>[Yii::$app->account, 'processChargePaySuccess'],
+            'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
+        ];
+
+        $trans = null;
+        //业务逻辑处理，此处应当判断订单是否成功
+        if ($trans = $payment->processNotify($handlers)) {
+            $transaction->commit();
+            Yii::info('成功处理用户充值逻辑', 'account-pay-notify');
+
+            //如果交易存在关联的交易，则查询关联交易的信息，并尝试支付相应的关联订单，需要提供订单的回调函数
+            if ($trans->trans_id_ext) {
+                //如果存在关联订单，需要开启新事务处理相关订单
+                Yii::info('存在关联交易，处理关联交易逻辑', 'account-pay-notify');
+                $transaction = Yii::$app->db->beginTransaction();
+                $transOrder = Trans::findOne($trans->trans_id_ext);
+                if (!$transOrder) {
+                    $transaction->rollback();
+                    Yii::warning('关联交易查询失败,并不存在该关联交易订单， 退出购买逻辑', 'account-pay-notify');
+                    throw new LBUserException('关联交易查询失败，退出购买逻辑', 2);
+                    exit;
+                }
+
+                if (Yii::$app->account->pay($transOrder)) {
+                    //如果关联交易为产品购买
+                    if ($transOrder->trans_type_id == Trans::TRANS_TYPE_TRADE) {
+                        $booking = Booking::findOne(['bid'=>$transOrder->trans_id_ext]);
+                        if (! $booking) {
+                            $transaction->rollback();
+                            Yii::warning('查询关联预订失败', 'account-pay-notify');
+                            return false;
                         }
-                        $transaction->commit();
-                        Yii::info('提交事务...', 'account-pay-notify');
-                        //页面跳转逻辑
+                        Yii::info('关联预订信息获取成功', 'account-pay-notify');
+                        $callbackData = [
+                            'bid' =>$booking->bid ,
+                            'trans_id' => $booking->trans_id,
+                            ];
+                        if (! Booking::processPaySuccess($callbackData)) {
+                            $transaction->rollback();
+                            Yii::warning('关联预订处理操作失败', 'account-pay-notify');
+                            throw new LBUserException('订单支付成功回调处理失败', 3);
+                            exit;
+                        }
+                        Yii::info('关联预订相关回调处理成功', 'account-pay-notify');
                     }
-                    else {
-                        $transaction->rollback();
-                        return;
-                        //页面跳转逻辑
-                    }
+                    $transaction->commit();
+                    Yii::info('提交事务...', 'account-pay-notify');
+                    //页面跳转逻辑
+                }
+                else {
+                    $transaction->rollback();
+                    throw new LBUserException('订单付款失败', 4, Yii::$app->account->getErrors());
+                    exit;
                 }
             }
-            else {
-                $transaction->rollback();
-                Yii::warning('处理支付成功失败...', 'account-pay-notify');
-                return true;
-            }
         }
-        catch (Exception $e) {
-            throw new Exception($e->getMessage());
+        else {
+            $transaction->rollback();
+            Yii::warning('处理支付成功失败...', 'account-pay-notify');
+            return true;
         }
         Yii::info('交易成功处理...', 'account-pay-notify');
         return true;
