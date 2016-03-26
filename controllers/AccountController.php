@@ -307,9 +307,8 @@ class AccountController extends WebController
 
         //判断订单是否支付成功, 如果成功则进入成功处理逻辑
         if ($payment->checkPayStatus() === false) {
-            $this->code = 1;
-            $this->message = '支付结果检查失败';
-            return false;
+            throw new LBUserException('支付结果检查失败!', 1);
+            exit;
         }
 
         $transaction = Yii::$app->db->beginTransaction();
@@ -328,7 +327,8 @@ class AccountController extends WebController
                     if (!$transOrder) {
                         $transaction->rollback();
                         Yii::warning('关联交易查询失败, 退出购买逻辑', 'account-pay-notify');
-                        return false;
+                        throw new LBUserException('关联交易查询失败，退出购买逻辑', 2);
+                        exit;
                     }
                     if (Yii::$app->account->pay($transOrder)) {
                         //如果关联交易为产品购买
