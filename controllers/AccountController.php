@@ -371,11 +371,10 @@ class AccountController extends WebController
         else {
             $transaction->rollback();
             Yii::warning('处理支付成功失败...', 'account-pay-notify');
-            return true;
+            throw new LBUserException('订单付款失败', 4, $payment->getErrors());
+            exit;
         }
         Yii::info('交易成功处理...', 'account-pay-notify');
-        return true;
-
     }
 
 }
