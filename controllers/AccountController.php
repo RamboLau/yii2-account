@@ -342,13 +342,14 @@ class AccountController extends WebController
                         if (! $booking) {
                             $transaction->rollback();
                             Yii::warning('查询关联预订失败', 'account-pay-notify');
-                            return false;
+                            throw new LBUserException('查询关联订单信息失败', 2);
+                            exit;
                         }
                         Yii::info('关联预订信息获取成功', 'account-pay-notify');
                         $callbackData = [
                             'bid' =>$booking->bid ,
                             'trans_id' => $booking->trans_id,
-                            ];
+                        ];
                         if (! Booking::processPaySuccess($callbackData)) {
                             $transaction->rollback();
                             Yii::warning('关联预订处理操作失败', 'account-pay-notify');
