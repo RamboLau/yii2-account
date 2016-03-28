@@ -559,15 +559,11 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2015/12/06 21:14:32
      **/
-    public function processChargePaySuccess($receivable) {
+    public function processChargePaySuccess($transId) {
 
-        $receivable->status = Receivable::PAY_STATUS_FINISHED;
-        if (!$receivable->save()) {
-            return false;
-        }
 
         //获取交易记录
-        $trans = Trans::findOne($receivable->trans_id);
+        $trans = Trans::findOne($transId);
         if (!$trans) {
             return false;
         }

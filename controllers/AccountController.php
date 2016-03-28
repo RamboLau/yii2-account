@@ -310,7 +310,7 @@ class AccountController extends WebController
         //如果checkPayStatus返回成功，代表支付成功，此时进行实际的业务处理
         $transaction = Yii::$app->db->beginTransaction();
 
-        //设置支付的成功和失败回调函数
+        //设置支付的成功和失败回调函数,此处处理的主要是账户体系的逻辑
         $handlers = [
             'paySuccessHandler'=>[Yii::$app->account, 'processChargePaySuccess'],
             'payFailHandler'=>[Yii::$app->account, 'processPayFailure'],
@@ -318,7 +318,8 @@ class AccountController extends WebController
 
         $trans = null;
         //业务逻辑处理，此处应当判断订单是否成功
-        if ($trans = $payment->processNotify($handlers)) {
+        if ($transId = $payment->processNotify($handlers)) {
+            $trans = 
             $transaction->commit();
             Yii::info('成功处理用户充值逻辑', 'account-pay-notify');
 
@@ -350,6 +351,7 @@ class AccountController extends WebController
                             'bid' =>$booking->bid ,
                             'trans_id' => $booking->trans_id,
                         ];
+                        //此处的回调为业务上的订单处理回调
                         if (! Booking::processPaySuccess($callbackData)) {
                             $transaction->rollback();
                             Yii::warning('关联预订处理操作失败', 'account-pay-notify');
