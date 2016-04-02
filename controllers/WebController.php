@@ -89,18 +89,4 @@ class WebController extends Controller
         return $result;
     }
 
-    /**
-     * 
-     * setError 设置错误信息
-     */
-    protected function triggerError($errorMsg, $errorNo = 1, $forceExit = true)
-    {
-        $this->code = $errorNo;
-        $this->message = is_array($errorMsg)?json_encode($errorMsg,true):$errorMsg;
-        if ($forceExit)
-        {
-            throw new Exception($this->message, $this->code);
-        }
-    }
-
 }
