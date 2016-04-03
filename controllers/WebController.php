@@ -10,7 +10,7 @@ use common\validators\SignValidator;
 use lubaogui\account\exceptions\LBUserException;
 
 /**
- * Site controller
+ * WebController 针对PC端的请求的controller基类
  */
 class WebController extends Controller
 {
@@ -52,8 +52,8 @@ class WebController extends Controller
         $data = parent::afterAction($action, $data);
         $result = null;
         //自定义处理逻辑,此处仅处理正常流程逻辑，对于异常逻辑，走下面的throwLBUserException方法
-        if (is_array($data)) {
-            $result['data'] = $data;
+        if (is_array($data) || !$data) {
+            $result['data'] = $data ? $data : [];
             $result['code'] = 0;
             $result['message'] = '';
             Yii::$app->getResponse()->format = Response::FORMAT_JSON; 
@@ -73,7 +73,7 @@ class WebController extends Controller
      * @param bool $forceExit 是否强制程序返回退出
      *
      */
-    public function throwLBUserException($errMsg, $errCode, $errors = []) {
+    public function throwLBUserException($errMsg, $errCode = 1, $errors = []) {
         thow new LBUserException($errMsg, $errCode, $errors);
     }
 
