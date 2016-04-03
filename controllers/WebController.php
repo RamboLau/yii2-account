@@ -7,13 +7,7 @@ use yii\web\UploadedFile;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use common\validators\SignValidator;
-use yii\base\Exception;
-use common\models\User;
-use common\models\Person;
-use common\models\Message;
-use common\models\SceneMatches;
-use yii\db\Query;
-use yii\helpers\ArrayHelper;
+use lubaogui\account\exceptions\LBUserException;
 
 /**
  * Site controller
@@ -22,71 +16,65 @@ class WebController extends Controller
 {
 
     /**
-     * @inheritdoc
-     */
-    public function behaviors()
-    {
-        $behaviors = parent::behaviors();
-        unset($behaviors['contentNegotiator']['formats']['application/xml']);
-        return $behaviors;
-    }
-
-   /**
-     * @inheritdoc
-     */
-    public function verbs()
-    {
-        return [];
-    }
-
-    /**
-     * @inheritdoc
+     * @brief 在动作之前执行的一些预处理
+     *
+     * @return string $action 将要执行的action
      */
     public function beforeAction($action)
     {
-        //Yii::$app->user->setReturnUrl(Yii::$app->request->referrer);
         if (parent::beforeAction($action)) {
-            $this->requestParams =
-                array_merge(Yii::$app->request->get(),Yii::$app->request->post());
-            $this->headers = Yii::$app->request->getHeaders()->toArray();
-            $this->user = Yii::$app->user->identity;
-            $this->uid = Yii::$app->user->identity['id'];
-            $this->webroot = Yii::getAlias('@webroot');
             return true;
         }
-        else 
-        {
+        else{ 
             return false;
         }
     }
 
+    /**
+     * @brief 渲染模板文件
+     *
+     * @param string $view 模板 
+     * @return array $param 参数
+     */
     public function render($view, $param = []){
         return parent::render($view,$param);
     }
 
     /**
-     * @inheritdoc
+     * @brief controller的action执行之后的处理函数，该函数类似于回调函数
+     *
+     * @param string $action 执行的action
+     * @param mixed $data action返回的结果
+     * @return mixed 处理之后的结果
      */
     public function afterAction($action, $data)
     {
-        if(is_array($data) ||!$data){
-            if (!$data) {
-                $data = [
-                    'code' => $this->code,
-                    'message' => $this->message,
-                    'data' => $this->data,
-                    'meta' => $this->meta,
-                ];
-            }
-            if (isset($data['data']['message'])) {
-                $data['message'] = $data['data']['message'];
-                unset($data['data']['message']);
-            }
-            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $data = parent::afterAction($action, $data);
+        $result = null;
+        //自定义处理逻辑,此处仅处理正常流程逻辑，对于异常逻辑，走下面的throwLBUserException方法
+        if (is_array($data)) {
+            $result['data'] = $data;
+            $result['code'] = 0;
+            $result['message'] = '';
+            Yii::$app->getResponse()->format = Response::FORMAT_JSON; 
         }
-        $result = parent::afterAction($action, $data);
-        //自定义自己的返回后期处理代码
+        else {
+            $result = $data;
+        }
         return $result;
+    }
+
+    /**
+     * @brief 统一的异常抛出函数
+     *
+     * @param string $errMsg 错误信息
+     * @param int $errCode 错误代码
+     * @param array $errors 错误信息数组
+     * @param bool $forceExit 是否强制程序返回退出
+     *
+     */
+    public function throwLBUserException($errMsg, $errCode, $errors = []) {
+        thow new LBUserException($errMsg, $errCode, $errors);
     }
 
 }

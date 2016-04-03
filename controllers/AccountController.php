@@ -102,7 +102,7 @@ class AccountController extends WebController
             //生成提交给支付模块的待付款记录
             if (!$receivable = Yii::$app->account->generateReceivable($trans)) {
                 $transaction->rollback();
-                throw new Exception('产生收款记录失败');
+                $this->throwLBUserException('产生收款记录失败', 1001, Yii::$app->account->getErrors());
             }
             $transaction->commit();
 
@@ -115,7 +115,7 @@ class AccountController extends WebController
             }
             //返回需要跳转到页面url或者二维码图片, 如果返回flase，则报错
             if (! $payment->gotoPay($receivable, $returnType)) {
-                throw new Exception('无法产生支付信息，订单或已支付');
+                $this->throwLBUserException('无法产生支付信息，订单或已支付', 1002, $this->getErrors());
             }
         }
         else {
@@ -157,7 +157,7 @@ class AccountController extends WebController
         $trans = null;
         if (! $trans = $payForm->getTrans()) {
             $transaction->rollback();
-            throw new Exception(json_encode($payForm->getErrors()));
+            $this->throwLBUserException('无法产生支付交易', 1003, $payForm->getErrors());
         }
 
         //如果账户余额大于交易的总金额，则直接支付
@@ -168,28 +168,26 @@ class AccountController extends WebController
                 if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
                     $transaction->commit();
                     //支付成功
-                    $this->data = [
+                    return [
                         'pay_url'=>'',
                         'need_pay'=>0,
                         'channel_id'=>0,
                         ];
-                    return;
                 }
                 else {
                     $transaction->rollback();
-                    //此处需要设置错误信息
-                    return ;
+                    $this->throwLBUserException('支付回调中订单处理出现异常', 1004, Yii::$app->account->getErrors());
                 }
             }
             else {
                 $transaction->rollback();
-                return;
+                $this->throwLBUserException('账户余额支付订单时候出现异常', 1005, Yii::$app->account->getErrors());
             }
         }
 
         if (! $receivable = Yii::$app->account->generateReceivableAndChargeTrans($trans, $userAccount)) {
             $transaction->rollback();
-            throw new Exception('生成充值订单出错');
+            $this->throwLBUserException('生成充值订单出错', 1006, Yii::$app->account->getErrors());
         }
         else {
             if (call_user_func([Booking::className(), 'processGenTransSuccess'], $callbackData)) {
@@ -197,7 +195,7 @@ class AccountController extends WebController
             }
             else {
                 $transaction->rollback();
-                throw new Exception('生成支付信息出错');
+                $this->throwLBUserException('处理订单状态回调时出错', 1007, Yii::$app->account->getErrors());
             }
         }
 
@@ -217,14 +215,14 @@ class AccountController extends WebController
         $returnData = $payment->generateRequestParams($receivable);
 
         if ($returnData) {
-            $this->data = [
+            return [
                 'pay_url'=>$returnData,
                 'need_pay'=>1,
                 'channel_id'=>$payForm->channel_id,
-                ];
+            ];
         }
         else {
-            throw new Exception('支付失败');
+            $this->throwLBUserException('处理订单状态回调时出错', 1008, $payment->getErrors());
         }
 
     }
