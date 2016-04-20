@@ -191,7 +191,7 @@ class PayableController extends Controller
         foreach ($payeds as $payable) {
             $userAccount = Yii::$app->account->getUserAccount($payable->uid);
             $callbackFunc = [UserWithdraw::className(), 'processFinishPayNotify'];
-            if (!$userAccount->processWithdrawPaySuccess($payable->id, $callbackFunc)) {
+            if (!Yii::$app->account->processWithdrawPaySuccess($payable->id, $callbackFunc)) {
                 //将错误处理的信息记录下来
                 $transaction->rollback();
                 return false;
@@ -206,6 +206,7 @@ class PayableController extends Controller
         }
 
         $payBatch->status = PayableProcessBatch::BATCH_PAY_STATUS_FINISHED;
+        $payBatch->pay_time = time(); 
         if ($payBatch->save()) {
             $transaction->commit();
             //转换成页面显示错误
