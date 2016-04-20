@@ -435,25 +435,20 @@ class Account extends BaseAccount
             return false;
         }
 
+        //完成冻结，用户的冻结金额进行操作
         $withdrawUser = $this->getUserAccount($payable->receive_uid);
-        //完成冻结，将款项从冻结中减除
-        if ($withdrawUser->finishFreeze($trans->total_money)) {
-            return true;
-        }
-        else {
+        if (! $withdrawUser->finishFreeze($trans->total_money)) {
             $this->addError('display-error', '减除用户冻结余额时出错!');
             $this->addErrors($withdrawUser->getErrors());
             return false;
         }
 
-        //冻结记录完成
+        //对冻结记录本身的状态进行操作
         $freeze = Freeze::fineOne(['trans_id'=>$trans->id, 'type'=>Freeze::FREEZE_TYPE_WITHDRAW]);
-
         if (!$freeze) {
             $this->addError('display-error', '冻结记录不存在');
             return false;
         }
-
         if (!$freeze->finishFreeze()) {
             $this->addError('display-error', '冻结记录无法更改状态');
             return false;
