@@ -46,11 +46,11 @@ class BaseAccount extends Model
      * @note 
      * @author 吕宝贵
      * @date 2015/12/30 16:55:03
-    **/
+     **/
     public function behaviors() {
         return [
             ErrorBehavior::className(),
-        ];
+                ];
     }
 
     /**
@@ -89,7 +89,7 @@ class BaseAccount extends Model
      * @note 
      * @author 吕宝贵
      * @date 2016/01/07 10:57:17
-    **/
+     **/
     public function getCompanyPayAccount() {
         $companyAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_PAY])->one();
         if (! $companyAccount) {
@@ -108,7 +108,7 @@ class BaseAccount extends Model
      * @note 
      * @author 吕宝贵
      * @date 2016/01/07 11:06:18
-    **/
+     **/
     public function getVouchAccount() {
         $vouchPayAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_VOUCH])->one();
         if (! $vouchPayAccount) {
@@ -126,7 +126,7 @@ class BaseAccount extends Model
      * @note 
      * @author 吕宝贵
      * @date 2016/01/07 12:07:15
-    **/
+     **/
     public function getProfitAccount() {
         $profitAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_PROFIT])->one();
         if (! $profitAccount) {
@@ -144,7 +144,7 @@ class BaseAccount extends Model
      * @note 
      * @author 吕宝贵
      * @date 2016/01/07 12:07:47
-    **/
+     **/
     public function getFeeAccount() {
         $feeAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_FEE])->one();
         if (! $feeAccount) {
@@ -269,6 +269,91 @@ class BaseAccount extends Model
             break;
         }
         default:break;
+        }
+
+    }
+
+    /**
+     * @brief 用户帐户变动的核心函数,所有的变动都需要通过此函数来记录
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2015/12/30 14:39:00
+     **/
+    protected function balance($uid, $balanceType, $money, $trans, $description, $currency) {
+
+        $userAccount = $this->getUserAccount($uid);
+
+        switch $balanceType {
+        case self::BALANCE_TYPE_PLUS : {
+            $userAccount->balance += $money;
+            break;
+        }
+        case self::BALANCE_TYPE_MINUS : {
+            $userAccount->balance -= $money;
+            break;
+        }
+        case self::BALANCE_TYPE_FREEZE : {
+            $userAccount->balance -= $money;
+            $userAccount->frozen_money += $money;
+            break;
+        }
+        case self::BALANCE_TYPE_UNFREEZE : {
+            $userAccount->balance += $money;
+            $userAccount->frozen_money -= $money;
+            break;
+        }
+        case self::BALANCE_TYPE_FINISH_FREEZE : {
+            $userAccount->frozen_money -= $money;
+            break;
+        }
+        default {
+            $userAccount->addError('uid', '不支持提交的账户操作类型');
+            return false;
+        }
+        }
+
+        if ($userAccount->save()) {
+            //记录账单
+            $bill = new Bill();
+            $bill->uid = $userAccount->uid;
+            $bill->trans_id = $trans->id;
+            $bill->trans_type_id = $trans->trans_type_id;
+            $bill->trans_type_name = $trans->transType->name;
+            $bill->money = $money;
+            $bill->balance_type = $balanceType;
+            $bill->currency = $trans->currency;
+            $bill->description = $description;
+            if (! $bill->save()) {
+                $userAccount->addErrors($bill->getErrors());
+                return false;
+            }
+
+            //账户快照产生
+            $accountLog = new UserAccountLog();
+            $accountLog->uid = $userAccount->uid;
+            $accountLog->account_type = $userAccount->type;
+            $accountLog->currency = $trans->currency;
+            $accountLog->trans_id = $trans->id;
+            $accountLog->balance = $userAccount->balance;
+            $accountLog->deposit = $userAccount->deposit;
+            $accountLog->frozen_money = $userAccount->frozen_money;
+            $accountLog->balance_type = $balanceType;
+            $accountLog->trans_money = $money;
+            $accountLog->trans_desc = $description;
+
+            if (! $accountLog->save()) {
+                $userAccount->addErrors($accountLog->getErrors());
+                return false;
+            }
+            return true;
+
+        }    
+        else {
+            return false;
         }
 
     }
