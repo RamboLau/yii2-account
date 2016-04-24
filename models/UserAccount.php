@@ -13,7 +13,6 @@ use lubaogui\account\models\Bill;
 use lubaogui\account\models\Freeze;
 use lubaogui\account\models\UserAccountLog;
  
- 
 /**
  * @file UserAccount.php
  * @author 吕宝贵(lbaogui@lubanr.com)
@@ -22,7 +21,6 @@ use lubaogui\account\models\UserAccountLog;
  * @brief
  *
  **/
-
 
 class UserAccount extends ActiveRecord 
 {

@@ -530,21 +530,6 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 根据交易记录产生收款记录
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2015/12/23 00:07:28
-    **/
-    public function generatePayable($trans) {
-        //新建收款记录
-
-    }
-
-    /**
      * @brief 充值成功处理,第三方的只有充值成功通知,在支持成功之后的业务逻辑处理，支付宝和微信的所有回告都应该是充值接口
      *
      * @param string $callback 回调函数，仅仅对需要对订单进行逻辑处理的操作有效，需要添加订单id为参数
