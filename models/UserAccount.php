@@ -127,7 +127,7 @@ class UserAccount extends ActiveRecord
             $this->addError('balance', '余额不足，无法支持操作');
             return false;
         }
-        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $trans, $description, $currency =1);
+        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $trans, $description, $currency);
     }
 
     /**
@@ -141,11 +141,7 @@ class UserAccount extends ActiveRecord
      * @date 2015/12/04 23:50:06
     **/
     public function freeze($money, $trans, $description, $currency = 1) {
-        if ($this->balance - $money < 0) {
-            $this->addError('balance', '余额不足，无法相对应操作');
-            return false;
-        }
-        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $trans, $description, $currency =1);
+        return $this->balance(self::BALANCE_TYPE_FREEZE, $money, $trans, $description, $currency);
     }
 
     /**
@@ -159,15 +155,7 @@ class UserAccount extends ActiveRecord
      * @date 2016/01/01 22:03:21
     **/
     public function unfreeze($money, $trans, $description, $currency = 1) {
-        $this->balance = $this->balance + $money;
-        $this->frozen_money = $this->frozen_money - $money;
-
-        if ($this->save()) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return $this->balance(self::BALANCE_TYPE_UNFREEZE, $money, $trans, $description, $currency);
     }
 
     /**
@@ -181,17 +169,8 @@ class UserAccount extends ActiveRecord
      * @date 2016/01/02 14:53:04
     **/
     public function finishFreeze($money, $trans, $description, $currency = 1) {
-
-        $this->frozen_money = $this->frozen_money - $money;
-        if ($this->save()) {
-            return true;
-        }
-        else {
-            return false;
-        }
-
+        return $this->balance(self::BALANCE_TYPE_FINISH_FREEZE, $money, $trans, $description, $currency);
     }
-
 
     /**
      * @brief 账户减除或者增加金额
@@ -203,7 +182,7 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/30 14:39:00
     **/
-    public function balance($balanceType, $money, $trans, $description) {
+    protected function balance($balanceType, $money, $trans, $description, $currency) {
 
         switch $balanceType {
         case self::BALANCE_TYPE_PLUS : {
