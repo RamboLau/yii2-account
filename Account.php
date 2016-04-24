@@ -556,7 +556,6 @@ class Account extends BaseAccount
      **/
     public function processChargePaySuccess($transId) {
 
-
         //获取交易记录
         $trans = Trans::findOne($transId);
         if (!$trans) {

@@ -37,8 +37,11 @@ class UserAccount extends ActiveRecord
 
     //支出类型
 
-    const BALANCE_TYPE_PLUS = 1;
-    const BALANCE_TYPE_MINUS = 2;
+    const BALANCE_TYPE_PLUS = 1;          //收入
+    const BALANCE_TYPE_MINUS = 2;         //支出
+    const BALANCE_TYPE_FREEZE = 3;        //冻结
+    const BALANCE_TYPE_UNFREEZE = 4;      //冻结取消
+    const BALANCE_TYPE_FINISH_FREEZE = 5; //冻结关联动作完成
 
     /**
      * @brief 获取表名称，{{%}} 会自动将表名之前加前缀，前缀在db中定义
@@ -97,8 +100,6 @@ class UserAccount extends ActiveRecord
 
     }
 
-
-
     /**
      * @brief 
      *
@@ -141,24 +142,16 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/04 23:50:06
     **/
-    public function freeze($money) {
-        if ($this->balance < $money) {
-            $this->addError('balance', '余额不足');
+    public function freeze($money, $trans, $description, $currency = 1) {
+        if ($this->balance - $money < 0) {
+            $this->addError('balance', '余额不足，无法相对应操作');
             return false;
         }
-        $this->balance = $this->balance - $money;
-        $this->frozen_money = $this->frozen_money + $money;
-
-        if ($this->save()) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $trans, $description, $currency =1);
     }
 
     /**
-     * @brief 解锁金额
+     * @brief 解锁冻结金额，注意，解锁是锁定的逆向操作，如果是操作完成，请使用finishFreeze
      *
      * @return  public function 
      * @retval   
@@ -167,7 +160,7 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2016/01/01 22:03:21
     **/
-    public function unfreeze($money) {
+    public function unfreeze($money, $trans, $description, $currency = 1) {
         $this->balance = $this->balance + $money;
         $this->frozen_money = $this->frozen_money - $money;
 
@@ -189,7 +182,7 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2016/01/02 14:53:04
     **/
-    public function finishFreeze($money) {
+    public function finishFreeze($money, $trans, $description, $currency = 1) {
 
         $this->frozen_money = $this->frozen_money - $money;
         if ($this->save()) {
@@ -214,15 +207,33 @@ class UserAccount extends ActiveRecord
     **/
     public function balance($balanceType, $money, $trans, $description) {
 
-        if ($balanceType === static::BALANCE_TYPE_PLUS) {
+        switch $balanceType {
+        case self::BALANCE_TYPE_PLUS : {
             $this->balance += $money;
+            break;
         }
-        else if ($balanceType === static::BALANCE_TYPE_MINUS) {
+        case self::BALANCE_TYPE_MINUS : {
             $this->balance -= $money;
+            break;
         }
-        else {
+        case self::BALANCE_TYPE_FREEZE : {
+            $this->balance -= $money;
+            $this->frozen_money += $money;
+            break;
+        }
+        case self::BALANCE_TYPE_UNFREEZE : {
+            $this->balance += $money;
+            $this->frozen_money -= $money;
+            break;
+        }
+        case self::BALANCE_TYPE_FINISH_FREEZE : {
+            $this->frozen_money -= $money;
+            break;
+        }
+        default {
             $this->addError('uid', '不支持提交的账户操作类型');
             return false;
+        }
         }
 
         if ($this->save()) {
