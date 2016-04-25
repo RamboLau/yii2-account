@@ -110,6 +110,7 @@ class Freeze extends ActiveRecord
             return true;
         }
         else {
+            $this->addError(__METHOD__, '该记录已经解锁');
             return false;
         }
     }
@@ -125,6 +126,7 @@ class Freeze extends ActiveRecord
      * @date 2016/01/03 21:03:17
     **/
     public function saveTransId($transId) {
+
         $this->trans_id = $transId;
         if ($this->save()) {
             return true;

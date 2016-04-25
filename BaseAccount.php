@@ -331,9 +331,13 @@ class BaseAccount extends Model
      **/
     public function finishFreeze($uid, $transId) {
         //获取trans相对应的freeze记录
+        $freeze = Freeze::findOne(['trans_id'=>$transId]);
+        if (empty($freeze)) {
+            $this->addError(__METHOD__, '该交易并没有关联的冻结记录');
+            return false;
+        }
 
         $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, )
-
     }
 
 
@@ -360,11 +364,11 @@ class BaseAccount extends Model
 
         switch $balanceType {
         case UserAccount::BALANCE_TYPE_PLUS : {
-            $userAccount->balance += $money;
+            $userAccount->plus($money);
             break;
         }
         case UserAccount::BALANCE_TYPE_MINUS : {
-            $userAccount->balance -= $money;
+            $userAccount->minus($money);
             break;
         }
         case UserAccount::BALANCE_TYPE_FREEZE : {
