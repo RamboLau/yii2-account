@@ -108,8 +108,9 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/01 16:26:45
     **/
-    public function plus($money, $trans, $description, $currency = 1) {
-        return $this->balance(static::BALANCE_TYPE_PLUS, $money, $trans, $description, $currency =1);
+    public function plus($money) {
+        $this->balance += $money;
+        return true;
     }
 
     /**
@@ -122,16 +123,17 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/04 22:57:20
     **/
-    public function minus($money, $trans, $description, $currency = 1) {
+    public function minus($money) {
         if ($this->balance - $money < 0) {
-            $this->addError('balance', '余额不足，无法支持操作');
+            $this->addError(__METHOD__, '余额不足，无法支持操作');
             return false;
         }
-        return $this->balance(static::BALANCE_TYPE_MINUS, $money, $trans, $description, $currency);
+        $this->balance -= $money;
+        return true;
     }
 
     /**
-     * @brief 冻结用户的金额,该操作仅操作用户的金额，不填写freeze记录
+     * @brief 冻结用户的金额,该操作仅操作用户账户上的金额，不填写freeze记录,freeze记录在上层逻辑上填写
      *
      * @return  public function 
      * @retval   
@@ -140,8 +142,14 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2015/12/04 23:50:06
     **/
-    public function freeze($money, $trans, $description, $currency = 1) {
-        return $this->balance(self::BALANCE_TYPE_FREEZE, $money, $trans, $description, $currency);
+    public function freeze($money) {
+        if ($this->balance - $money < 0) {
+            $this->addError(__METHOD__, '余额不足，无法支持冻结操作');
+            return false;
+        }
+        $this->balance += $money;
+        $this->frozen_money -= $money;
+        return true;
     }
 
     /**
@@ -154,8 +162,14 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2016/01/01 22:03:21
     **/
-    public function unfreeze($money, $trans, $description, $currency = 1) {
-        return $this->balance(self::BALANCE_TYPE_UNFREEZE, $money, $trans, $description, $currency);
+    public function unfreeze($money) {
+        if ($this->frozen_money - $money < 0) {
+            $this->addError(__METHOD__, '冻结金额不足，无法支持解冻操作');
+            return false;
+        }
+        $this->balance += $money;
+        $this->frozen_money -= $money;
+        return true;
     }
 
     /**
@@ -168,10 +182,14 @@ class UserAccount extends ActiveRecord
      * @author 吕宝贵
      * @date 2016/01/02 14:53:04
     **/
-    public function finishFreeze($money, $trans, $description, $currency = 1) {
-        return $this->balance(self::BALANCE_TYPE_FINISH_FREEZE, $money, $trans, $description, $currency);
+    public function finishFreeze($money) {
+        if ($this->frozen_money - $money < 0) {
+            $this->addError(__METHOD__, '冻结金额不足，无法支持完成冻结操作');
+            return false;
+        }
+        $this->frozen_money -= $money;
+        return true;
     }
-
 }
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */

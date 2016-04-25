@@ -50,7 +50,7 @@ class BaseAccount extends Model
     public function behaviors() {
         return [
             ErrorBehavior::className(),
-                ];
+        ];
     }
 
     /**
@@ -63,14 +63,14 @@ class BaseAccount extends Model
      * @author 吕宝贵
      * @date 2015/12/06 17:59:27
      **/
-    public function getUserAccount($uid) {
+    public function getUserAccount($uid, $accountType = UserAccount::ACCOUNT_TYPE_NORMAL) {
         if (empty($uid)) {
             $this->addError('display-error', '提交的用户id为空');
             return false;
         }
         $userAccount = UserAccount::findOne($uid);
         if (!$userAccount) {
-            $userAccount = UserAccount::createAccount($uid, UserAccount::ACCOUNT_TYPE_NORMAL);
+            $userAccount = UserAccount::createAccount($uid, $accountType);
             if (! $userAccount) {
                 $this->addError('display-error', '为用户开户失败');
                 return false;
@@ -249,10 +249,8 @@ class BaseAccount extends Model
     /**
      * @brief 
      *
-     * @return  protected function 
+     * @return  
      * @retval   
-     * @see 
-     * @note 
      * @author 吕宝贵
      * @date 2015/12/05 12:45:52
      **/
@@ -274,6 +272,72 @@ class BaseAccount extends Model
     }
 
     /**
+     * @brief 用户帐户增加描述为description的$money
+     *
+     * @return  
+     * @retval   
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:52
+     **/
+    public function plus($uid, $money, $transId, $description, $currency = 1 ) {
+
+        $this->balance();
+    }
+
+    /**
+     * @brief 用户帐户减少描述为description的$money
+     *
+     * @return  protected function 
+     * @retval   
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:52
+     **/
+    public function minus($uid, $money, $transId, $description, $currency = 1) {
+        $this->balance();
+
+    }
+
+    /**
+     * @brief 用户账户需要冻结$money的金额,UserAccount类中也应该有freeze方法
+     *
+     * @return  protected function 
+     * @retval   
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:52
+     **/
+    public function freeze($uid, $money, $transId, $description, $currency = 1) {
+
+    }
+
+    /**
+     * @brief 用户帐户需要解除交易id为$transId的冻结记录
+     *
+     * @retval   
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:52
+     **/
+    public function unFreeze($uid, $transId) {
+
+    }
+
+
+    /**
+     * @brief 用户帐户需要完成交易id为$transId的冻结记录
+     *
+     * @return  protected function 
+     * @retval   
+     * @author 吕宝贵
+     * @date 2015/12/05 12:45:52
+     **/
+    public function finishFreeze($uid, $transId) {
+        //获取trans相对应的freeze记录
+
+        $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, )
+
+    }
+
+
+    /**
      * @brief 用户帐户变动的核心函数,所有的变动都需要通过此函数来记录
      *
      * @return  public function 
@@ -283,31 +347,36 @@ class BaseAccount extends Model
      * @author 吕宝贵
      * @date 2015/12/30 14:39:00
      **/
-    protected function balance($uid, $balanceType, $money, $trans, $description, $currency) {
+    protected function balance($uid, $balanceType, $money, $transId, $description, $currency) {
+
+        //根据交易号查找对应的交易
+        $trans = Trans::findOne($transId);
+        if (! $trans) {
+            $this->addError('trans', '不存在该交易订单');
+            return false;
+        }
 
         $userAccount = $this->getUserAccount($uid);
 
         switch $balanceType {
-        case self::BALANCE_TYPE_PLUS : {
+        case UserAccount::BALANCE_TYPE_PLUS : {
             $userAccount->balance += $money;
             break;
         }
-        case self::BALANCE_TYPE_MINUS : {
+        case UserAccount::BALANCE_TYPE_MINUS : {
             $userAccount->balance -= $money;
             break;
         }
-        case self::BALANCE_TYPE_FREEZE : {
-            $userAccount->balance -= $money;
-            $userAccount->frozen_money += $money;
+        case UserAccount::BALANCE_TYPE_FREEZE : {
+            $userAccount->freeze($money);
             break;
         }
-        case self::BALANCE_TYPE_UNFREEZE : {
-            $userAccount->balance += $money;
-            $userAccount->frozen_money -= $money;
+        case UserAccount::BALANCE_TYPE_UNFREEZE : {
+            $userAccount->unFreeze($money);
             break;
         }
-        case self::BALANCE_TYPE_FINISH_FREEZE : {
-            $userAccount->frozen_money -= $money;
+        case UserAccount::BALANCE_TYPE_FINISH_FREEZE : {
+            $userAccount->finishFreeze($money);
             break;
         }
         default {
