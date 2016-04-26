@@ -280,8 +280,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function plus($uid, $money, $transId, $description, $currency = 1 ) {
-
-        $this->balance();
+        $this->balance($uid, UserAccount::BALANCE_TYPE_PLUS, $money, $transId, $description, $currency);
     }
 
     /**
@@ -293,8 +292,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function minus($uid, $money, $transId, $description, $currency = 1) {
-        $this->balance();
-
+        $this->balance($uid, UserAccount::BALANCE_TYPE_MINUS, $money, $transId, $description, $currency);
     }
 
     /**
@@ -306,7 +304,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function freeze($uid, $money, $transId, $description, $currency = 1) {
-
+        $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $transId, $description, $currency);
     }
 
     /**
@@ -319,7 +317,6 @@ class BaseAccount extends Model
     public function unFreeze($uid, $transId) {
 
     }
-
 
     /**
      * @brief 用户帐户需要完成交易id为$transId的冻结记录
@@ -339,7 +336,6 @@ class BaseAccount extends Model
 
         $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, )
     }
-
 
     /**
      * @brief 用户帐户变动的核心函数,所有的变动都需要通过此函数来记录
