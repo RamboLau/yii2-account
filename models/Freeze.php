@@ -68,27 +68,27 @@ class Freeze extends ActiveRecord
      * @author 吕宝贵
      * @date 2016/01/02 11:22:10
     **/
-    public function unfreeze() {
-        if (empty($freeze)) {
-            $this->addError('display-error', '找不到对应的锁定记录');
-            return false;
-        }
+    public function unFreeze() {
 
         if ($freeze->status === FREEZE_STATUS_THAWED) {
             $this->addError('display-error', '该记录已经解锁');
+            return false;
+        }
+        if ($freeze->status === FREEZE_STATUS_FINISHED) {
+            $this->addError('display-error', '冻结已完成，无法被解除');
             return false;
 
         }
 
         $freeze->thawed_at = time();
         $freeze->status = Freeze::FREEZE_STATUS_THAWED;
-
         if ($freeze->save()) {
             return true;
         }
         else {
             return false;
         }
+
     }
 
     /**
@@ -102,10 +102,17 @@ class Freeze extends ActiveRecord
      * @date 2016/01/02 11:11:21
     **/
     public function finishFreeze() {
+
+        if ($this->status === self::FREEZE_STATUS_THAWED) {
+            $this->addError(__METHOD__, '操作无法完成，记录已经解冻';
+            return false;
+        }
         if ($this->status === self::FREEZE_STATUS_FINISHED) {
             return true;
         }
+
         $this->status = self::FREEZE_STATUS_FINISHED;
+        $this->finished_at = time(); 
         if ($this->save()) {
             return true;
         }
@@ -113,6 +120,7 @@ class Freeze extends ActiveRecord
             $this->addError(__METHOD__, '该记录已经解锁');
             return false;
         }
+
     }
 
     /**

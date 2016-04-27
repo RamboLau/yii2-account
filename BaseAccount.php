@@ -272,7 +272,7 @@ class BaseAccount extends Model
     }
 
     /**
-     * @brief 用户帐户增加描述为description的$money
+     * @brief 用户帐户增加描述为description的$money,关联交易为transId
      *
      * @return  
      * @retval   
@@ -304,7 +304,25 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function freeze($uid, $money, $transId, $description, $currency = 1) {
-        $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $transId, $description, $currency);
+        //产生冻结记录
+        $freeze = new Freeze();
+        $freeze->uid = $uid;
+        $freeze->type = Freeze::FREEZE_TYPE_WITHDRAW;
+        $freeze->money = $money;
+        $freeze->currency = $currency;
+        $freeze->trans_id = $transId;
+        $freeze->status = Freeze::FREEZE_STATUS_FREEZING;
+        $freeze->description = $description;
+
+        if ($freeze->save()) {
+            //账户结算
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $transId, $description, $currency);
+        }
+        else {
+            $this->addErrors($freeze->getErrors);
+            return false;
+        }
+
     }
 
     /**
@@ -314,8 +332,22 @@ class BaseAccount extends Model
      * @author 吕宝贵
      * @date 2015/12/05 12:45:52
      **/
-    public function unFreeze($uid, $transId) {
+    public function unFreeze($uid, $transId, $description, $currency) {
+        //获取trans相对应的freeze记录,并解除冻结
+        $freeze = Freeze::findOne(['uid'=>$uid, 'trans_id'=>$transId]);
+        if (empty($freeze)) {
+            $this->addError(__METHOD__, '该交易并没有关联的冻结记录');
+            return false;
+        }
 
+        //如果冻结操作成功，则对账户进行操作
+        if ($freeze->unFreeze()) {
+            return $this->balance($uid, $freeze->money, $transId, $description, $currency);
+        }
+        else {
+            $this->addErrors($freeze->getErrors());
+            return false;
+        }
     }
 
     /**
@@ -328,13 +360,19 @@ class BaseAccount extends Model
      **/
     public function finishFreeze($uid, $transId) {
         //获取trans相对应的freeze记录
-        $freeze = Freeze::findOne(['trans_id'=>$transId]);
+        $freeze = Freeze::findOne(['uid'=>$uid, 'trans_id'=>$transId]);
         if (empty($freeze)) {
             $this->addError(__METHOD__, '该交易并没有关联的冻结记录');
             return false;
         }
 
-        $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, )
+        if ($freeze->finish()) {
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $transId, $description, $currency);
+        }
+        else {
+            $this->addErrors($freeze->getErrors());
+            return false;
+        }
     }
 
     /**
