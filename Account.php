@@ -55,14 +55,14 @@ class Account extends BaseAccount
                 return true;
             }
             else {
-                $this->addError(__METHOD__, '结算付款时出错';
+                $this->addError(__METHOD__, '结算付款时出错');
                 return false;
             }
             break;
         }
         case Trans::PAY_MODE_VOUCHPAY: {
             $vouchAccount = $this->getVouchAccount();
-            if (!$this->plus($vouchAccount->uid, $trans->total_money, $trans->id, '担保账号收款')) {
+            if (!$this->plus($vouchAccount->uid, $trans->total_money, $trans->id, '担保账号交易收款')) {
                 return false;
             }
 
@@ -72,6 +72,8 @@ class Account extends BaseAccount
                 return true;
             }
             else {
+                $this->addError(__METHOD__, '保存交易状态时出错');
+                $this->addErrors($trans->getErrors());
                 return false;
             }
 
@@ -101,7 +103,7 @@ class Account extends BaseAccount
 
         //金额从担保账号转出
         $vouchAccount = $this->getVouchAccount();;
-        if (!$vouchAccount->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易账号转出完成购买')) {
+        if (!$this->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易账号转出完成购买')) {
             $this->addError(__METHOD__, '担保帐号转出失败');
             return false;
         }
@@ -139,26 +141,28 @@ class Account extends BaseAccount
         if (empty($trans)) {
             //此处可记录错误日志,或者写错误信息
             Yii::$app->warning('没有此交易记录');
+            $this->addError(__METHOD__, '不存在transId指定的交易');
             return false;
         }
 
         //仅用户之间的交易支持退款
         if (! $trans->transType->refundable) {
             Yii::$app->warning('此种交易不支持退款');
+            $this->addError(__METHOD__, '该类型的交易不支持退款,仅用户之间的担保交易支持退款');
             return false;
         }
 
         //如果已经在走退款流程，则直接抛出异常
         if ($trans->status === Trans::PAY_STATUS_REFUNDED) {
             Yii::$app->warning('退款已在进行中，或者已完成退款');
+            $this->addError(__METHOD__, '退款已在进行中，请勿重复退款');
             return false;
         }
 
-        //退款金额大小判断
+        //退款金额大小判断:退款金额需要大于0，同时退款金额不能超过交易总金额
         if ($refundMoney > 0) {
-            //退款金额不能大于交易总金额
             if ($refundMoney > $trans->total_money) {
-                $this->addError('display-error', '退款金额不能大于交易总金额');
+                $this->addError(__METHOD__, '退款金额不能大于交易总金额');
                 return false;
             }
             else {
@@ -167,7 +171,7 @@ class Account extends BaseAccount
             }
         }
         else {
-            $this->addError('display-error', '退款金额输入不正确!');
+            $this->addError('display-error', '退款金额需要大于0，并且不能超过订单总金额!');
             return false;
         }
 
@@ -176,19 +180,22 @@ class Account extends BaseAccount
         case Trans::PAY_STATUS_SUCCEEDED : {
             //从担保账号中退款,由于交易没有达成，分润也没有做，直接退款即可
             $vouchAccount = $this->getVouchAccount();
-            if (!$vouchAccount->minus($trans->total_money, $trans, '担保交易担保账号退款')) {
+            if (!$this->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易担保账号退款')) {
+                $this->addError(__METHOD__, '担保账号退款失败');
                 return false;
             }
             //如果交易存在保证金，则直接在退款同时将保证金打款给hug
             if ($trans->earnest_money > 0) {
                 $sellerAccount = $this->getUserAccount($trans->to_uid);
-                if (!$sellerAccount->plus($trans->earnest_money, $trans, '产品退款订金收入')) {
+                if (!$this->plus($sellerAccount->uid, $trans->earnest_money, $trans->id, '产品退款订金收入')) {
+                    $this->addError(__METHOD__, '给卖家打款保证金时出错');
                     return false;
                 }
             }
             break;
         }
         case Trans::PAY_STATUS_FINISHED : {
+            //TODO
             //获取卖家账号，并退款,如果卖方收款但是余额不足，无法退款。后期可以采用保证金方式，目前不支持此种退款
             return false;
             $sellerAccount = $this->getUserAccount($trans->to_uid);

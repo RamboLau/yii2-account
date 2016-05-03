@@ -128,22 +128,26 @@ class BaseAccount extends Model
 
         //退款是否收取手续费,可以在这里做逻辑判断,此处退款退给用户多少钱，需要确定
         $buyerAccount = UserAccount::findOne($trans->from_uid); 
-        if (!$buyerAccount->plus($trans->total_money - $trans->earnest_money, $trans, '产品退款')) {
+        if (!$this->plus($buyerAccount->uid, $trans->total_money - $trans->earnest_money, $trans->id, '订单退款')) {
             $this->addError('display-error', '为用户退款时发生错误');
             return false;
         }
 
         //对于支付交易已经完成的订单，需要退款手续费,利润，还有保证金等操作，一期先不做。
         if ($trans->status === Trans::PAY_STATUS_FINISHED) {
-            $this->addError('display-error', '交易已经完成，目前不支持此种退款');
+            $this->addError('display-error', '交易已经确认完成，目前不支持此种退款, 如果需要申诉，请联系客服处理');
             return false;
         }
 
         //保存交易状态
         $trans->status = Trans::PAY_STATUS_REFUNDED;
-        $trans->save();
-
-        return true;
+        if ($trans->save()) {
+            return true;
+        }
+        else {
+            $this->addError(__METHOD__, '保存交易状态变更时出错');
+            return false;
+        }
     }
 
     /**
