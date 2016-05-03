@@ -63,6 +63,7 @@ class Account extends BaseAccount
         case Trans::PAY_MODE_VOUCHPAY: {
             $vouchAccount = $this->getVouchAccount();
             if (!$this->plus($vouchAccount->uid, $trans->total_money, $trans->id, '担保账号交易收款')) {
+                $this->addError(__METHOD__, '担保账号收款失败');
                 return false;
             }
 
