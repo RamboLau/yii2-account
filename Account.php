@@ -35,30 +35,34 @@ class Account extends BaseAccount
         $buyerAccount = $this->getUserAccount($trans->from_uid);
         if ($buyerAccount->type != UserAccount::ACCOUNT_TYPE_NORMAL) {
             //throw new Exception('非普通账号不支持直接交易!请联系管理员');
+            $this->addError(__METHOD__, '非普通帐号不能参与支付交易');
             return false;
         }
 
         //不论哪种交易模式，首先从用户账户扣款，扣款成功才有后续动作
-        if (!$buyerAccount->minus($trans->total_money, $trans, '产品担保交易扣款')) {
+        if (!$this->minus($buyerAccount->uid, $trans->total_money, $trans->id, '产品担保交易扣款')) {
+            $this->addError(__METHOD__, '用户账户扣款失败');
+            $this->addErrors($buyerAccount->getErrors());
             return false;
         }
 
-        //直接支付交易,从购买者账号中直接扣款
-        if ($trans->pay_mode == Trans::PAY_MODE_DIRECTPAY) {
 
-            //finishPayTrans主要完成交易的后续操作，如打款给卖家，收取手续费等
+        //根据不同的交易模式，执行不同的业务逻辑,直接支付在此完成付款逻辑，担保交易再确认时
+        //完成剩余的付款逻辑
+        switch ($trans->pay_mode) {
+        case Trans::PAY_MODE_DIRECTPAY: {
             if ($this->finishPayTrans($trans)) {
                 return true;
             }
             else {
+                $this->addError(__METHOD__, '结算付款时出错';
                 return false;
             }
+            break;
         }
-
-        //担保支付情况，需要将款项在用户扣款成功之后支付给中间账号
-        if ($trans->pay_mode == Trans::PAY_MODE_VOUCHPAY) {
+        case Trans::PAY_MODE_VOUCHPAY: {
             $vouchAccount = $this->getVouchAccount();
-            if (!$vouchAccount->plus($trans->total_money, $trans, '担保账号收款')) {
+            if (!$this->plus($vouchAccount->uid, $trans->total_money, $trans->id, '担保账号收款')) {
                 return false;
             }
 
@@ -70,6 +74,10 @@ class Account extends BaseAccount
             else {
                 return false;
             }
+
+            break;
+        }
+        default: break;
         }
 
     }
@@ -87,17 +95,20 @@ class Account extends BaseAccount
     public function confirmVouchPay($transId) {
         $trans = Trans::findOne($transId);
         if ($trans->pay_mode != Trans::PAY_MODE_VOUCHPAY) {
+            $this->addError(__METHOD__, '交易并非担保交易，此操作无效');
             return false;
         }
 
         //金额从担保账号转出
         $vouchAccount = $this->getVouchAccount();;
-        if (!$vouchAccount->minus($trans->total_money, $trans, '担保交易账号转出完成购买')) {
+        if (!$vouchAccount->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易账号转出完成购买')) {
+            $this->addError(__METHOD__, '担保帐号转出失败');
             return false;
         }
 
         //完成交易的后续操作,是在扣款成功之后或者从担保账号中转出款项之后进行的操作
         if (!$this->finishPayTrans($trans)) {
+            $this->addError(__METHOD__, '结算失败');
             return false;
         }
 
@@ -107,6 +118,7 @@ class Account extends BaseAccount
             return true;
         }
         else {
+            $this->addError(__METHOD__, '保存交易信息失败');
             return false;
         }
     }

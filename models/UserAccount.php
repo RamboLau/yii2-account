@@ -83,6 +83,10 @@ class UserAccount extends ActiveRecord
     **/
     public static function createAccount($uid, $type = ACCOUNT_TYPE_NORMAL, $currency = 1) {
 
+        if ($type != self::ACCOUNT_TYPE_NORMAL) {
+        
+        }
+
         $account = new static();
         $account->uid = $uid;
         $account->currency = $currency;
@@ -95,6 +99,70 @@ class UserAccount extends ActiveRecord
         else {
             return false;
         }
+
+    }
+
+    /**
+     * @brief 获取公司付款账号
+     *
+     * @return  public function 
+     * @author 吕宝贵
+     * @date 2016/01/07 10:57:17
+     **/
+    public static function getCompanyPayAccount() {
+        return self::getPayAccount(self::ACCOUNT_TYPE_SELFCOMPANY_PAY);
+    }
+
+    /**
+     * @brief 担保交易中间账号
+     *
+     * @return  public function 
+     * @author 吕宝贵
+     * @date 2016/01/07 11:06:18
+     **/
+    public static function getVouchAccount() {
+        return self::getPayAccount(self::ACCOUNT_TYPE_SELFCOMPANY_VOUCH);
+    }
+
+    /**
+     * @brief 担保交易中间账号
+     *
+     * @return  public function 
+     * @author 吕宝贵
+     * @date 2016/01/07 11:06:18
+     **/
+    public static function getProfitAccount() {
+        return self::getPayAccount(self::ACCOUNT_TYPE_SELFCOMPANY_PROFIT;
+    }
+
+    /**
+     * @brief 担保交易中间账号
+     *
+     * @return  public function 
+     * @author 吕宝贵
+     * @date 2016/01/07 11:06:18
+     **/
+    public static function getFeeAccount() {
+        return self::getPayAccount(self::ACCOUNT_TYPE_SELFCOMPANY_FEE);
+    }
+
+    /**
+     * @brief 担保交易中间账号
+     *
+     * @return  public function 
+     * @retval   
+     * @see 
+     * @note 
+     * @author 吕宝贵
+     * @date 2016/01/07 11:06:18
+     **/
+    protected static function getPayAccount($type = self::ACCOUNT_TYPE_NORMAL) {
+
+        $account = self::findOne(['type'=>$type]);
+        if (! $account) {
+            throw new Exception('必须设置对应的账号');
+        }
+        return $account;
 
     }
 
@@ -190,6 +258,8 @@ class UserAccount extends ActiveRecord
         $this->frozen_money -= $money;
         return true;
     }
+
+
 }
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */

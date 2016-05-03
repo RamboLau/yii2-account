@@ -79,80 +79,6 @@ class BaseAccount extends Model
         return  $userAccount;
     }
 
-
-    /**
-     * @brief 获取公司付款账号
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/07 10:57:17
-     **/
-    public function getCompanyPayAccount() {
-        $companyAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_PAY])->one();
-        if (! $companyAccount) {
-            throw new Exception('必须设置公司付款账号');
-        }
-        return $companyAccount;
-
-    }
-
-    /**
-     * @brief 担保交易中间账号
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/07 11:06:18
-     **/
-    public function getVouchAccount() {
-        $vouchPayAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_VOUCH])->one();
-        if (! $vouchPayAccount) {
-            throw new Exception('必须设置担保交易账号');
-        }
-        return $vouchPayAccount;
-    }
-
-    /**
-     * @brief 利润账号
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/07 12:07:15
-     **/
-    public function getProfitAccount() {
-        $profitAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_PROFIT])->one();
-        if (! $profitAccount) {
-            throw new Exception('必须设置利润账号');
-        }
-        return $profitAccount;
-    }
-
-    /**
-     * @brief 手续费账号
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/07 12:07:47
-     **/
-    public function getFeeAccount() {
-        $feeAccount = UserAccount::find()->where(['type'=>UserAccount::ACCOUNT_TYPE_SELFCOMPANY_FEE])->one();
-        if (! $feeAccount) {
-            throw new Exception('必须设置担保交易账号');
-        }
-        return $feeAccount;
-    }
-
     /**
      * @brief 每个交易最后确认交易完成时所进行的操作，主要为打款给目的用户，分润，收取管理费等
      *
@@ -231,14 +157,14 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:03
      **/
     protected function processProfit($action, $trans) {
-        $profitAccount = $this->getProfitAccount();
+        $profitAccount = UserAccount::getProfitAccount();
         switch ($action) {
         case 'pay': {
-            return $profitAccount->plus($trans->profit, $trans, '利润收入');
+            return $this->plus($profitAccount->uid, $trans->profit, $trans->id, '利润收入');
             break;
         }
         case 'refund': {
-            return $profitAccount->minus($trans->profit, $trans, '利润退款');
+            return $this->minus($profitAccount->uid, $trans->profit, $trans->id, '利润退款');
             break;
         }
         default:break;
@@ -256,14 +182,14 @@ class BaseAccount extends Model
      **/
     protected function processFee($action, $trans) {
 
-        $profitAccount = $this->getProfitAccount();
+        $profitAccount = UserAccount::getProfitAccount();
         switch ($action) {
         case 'pay': {
-            $profitAccount->plus($trans->fee, $trans, '手续费收入');
+            $this->plus($profitAccount->uid, $trans->fee, $trans->id, '手续费收入');
             break;
         }
         case 'refund': {
-            $profitAccount->minus($trans->fee, $trans, '手续费退款');
+            $this->minus($profitAccount->uid, $trans->fee, $trans->id, '手续费退款');
             break;
         }
         default:break;
