@@ -332,16 +332,13 @@ class Account extends BaseAccount
      * 来产生trans
      *
      * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
      * @author 吕宝贵
      * @date 2015/12/06 17:44:54
      **/
     public function processWithdraw($withdrawId) {
         $withdraw = UserWithdraw::findOne($withdrawId);
         if (empty($withdraw)) {
-            $this->addError('display-error', '提现申请记录不存在');
+            $this->addError(__METHOD__, '提现申请记录不存在');
             return false;
         }
 
@@ -365,23 +362,24 @@ class Account extends BaseAccount
         }
 
         $freeze = Freeze::findOne(['source_id'=>$withdraw->id]);
-
         if (! $freeze) {
             $this->addError('display-error', '找不到冻结记录');
             return false;
         }
+        //设置freeze记录关联的transId
 
-        if (! $freeze->saveTransId($trans->id)) {
+        $freeze->trans_id = $trans->id;
+        if (! $freeze->save()) {
             $this->addError('display-error', '冻结记录回写交易信息失败');
-            $this->addErrors($trans->freeze->getErrors());
+            $this->addErrors($freeze->getErrors());
             return false;
         }
 
+        //生成打款记录
         $payable = null;
         if (! $payable = Payable::findOne(['trans_id'=>$trans->id])) {
             $payable = new  Payable();
         }
-
         $payable->trans_id = $trans->id;
         $payable->pay_uid = 0;
         $payable->receive_uid = $trans->to_uid;
@@ -390,7 +388,7 @@ class Account extends BaseAccount
         $payable->status = Payable::PAY_STATUS_WAITPAY;
         $payable->pay_method = Payable::PAY_METHOD_DIRECTPAY;
 
-        //返回收款记录,用以跳转到第三方进行支付
+        //保存打款记录，供财务下载打款处理
         if ($payable->save()) {
             return true;
         }

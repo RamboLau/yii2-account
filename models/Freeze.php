@@ -123,29 +123,6 @@ class Freeze extends ActiveRecord
 
     }
 
-    /**
-     * @brief 保存trans_id信息，trans_id当付款给用户成功之后回调处理时有用
-     *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
-     * @author 吕宝贵
-     * @date 2016/01/03 21:03:17
-    **/
-    public function saveTransId($transId) {
-
-        $this->trans_id = $transId;
-        if ($this->save()) {
-            return true;
-        }
-        else {
-            $this->addError('trans_id', 'trans_id保存失败');
-            return false;
-        }
-
-    }
-
 }
 
 /* vim: set et ts=4 sw=4 sts=4 tw=100: */
