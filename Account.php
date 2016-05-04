@@ -366,8 +366,8 @@ class Account extends BaseAccount
             $this->addError('display-error', '找不到冻结记录');
             return false;
         }
-        //设置freeze记录关联的transId
 
+        //设置freeze记录关联的transId
         $freeze->trans_id = $trans->id;
         if (! $freeze->save()) {
             $this->addError('display-error', '冻结记录回写交易信息失败');
@@ -402,17 +402,13 @@ class Account extends BaseAccount
     /**
      * @brief 处理提现下载支付列表到银行成功的动作
      *
-     * @return  public function 
-     * @retval   
-     * @see 
-     * @note 
+     * @return  bool 是否回掉成功 
      * @author 吕宝贵
      * @date 2016/01/02 16:30:03
     **/
     public function processWithdrawPaying($payable, $withdrawPayingCallback) {
 
         $payable->status = Payable::PAY_STATUS_PAYING;
-
         if (!$payable->save()) {
             $this->addError('display-error', '付款记录状态保存失败');
             return false;
@@ -438,43 +434,35 @@ class Account extends BaseAccount
      **/
     public function processWithdrawPaySuccess($payId, $paySuccessCallback) {
 
+        //处理交易信息
         $payable = Payable::findOne($payId); 
-
         if (!$payable) {
-            $this->addError('display-error', '获取付款记录信息失败');
+            $this->addError(__METHOD__, '获取付款记录信息失败');
             return false;
         }
-
-        //处理交易信息
         $trans = $payable->trans;
         $trans->status = Trans::PAY_STATUS_FINISHED;
         if (!$trans->save()) {
-            $this->addError('display-error', '交易信息保存失败');
+            $this->addError(__METHOD__, '交易信息保存失败');
             return false;
         }
 
         //完成冻结，用户的冻结金额进行操作
         $withdrawUser = $this->getUserAccount($payable->receive_uid);
-        if (! $withdrawUser->finishFreeze($trans->total_money)) {
-            $this->addError('display-error', '减除用户冻结余额时出错!');
-            $this->addErrors($withdrawUser->getErrors());
-            return false;
-        }
-
-        //对冻结记录本身的状态进行操作
-        $freeze = Freeze::fineOne(['trans_id'=>$trans->id, 'type'=>Freeze::FREEZE_TYPE_WITHDRAW]);
-        if (!$freeze) {
-            $this->addError('display-error', '冻结记录不存在');
-            return false;
-        }
-        if (!$freeze->finishFreeze()) {
-            $this->addError('display-error', '冻结记录无法更改状态');
+        if (! $this->finishFreeze($withdrawUser->uid, $trans->id)) {
+            $this->addError(__METHOD__, '减除用户冻结余额时出错!');
             return false;
         }
 
         //用户设定的回调操作
         $callbackData['id'] = $withdrawId ;
-        return call_user_func($paySuccessCallback, $callbackData);
+        if (call_user_func($paySuccessCallback, $callbackData)) {
+            return true;
+        }
+        else {
+            $this->addError(__METHOD__, '处理提现支付成功回掉函数时出错');
+            return false;
+        }
     }
 
     /**
@@ -489,7 +477,6 @@ class Account extends BaseAccount
     **/
     public function generateReceivable($trans) {
         //新建收款记录
-
         $receivable = null;
 
         if (! $receivable = Receivable::findOne(['trans_id'=>$trans->id])) {
@@ -522,11 +509,9 @@ class Account extends BaseAccount
      **/
     public function generateReceivableAndChargeTrans($trans, $userAccount) {
 
-
         $transCharge = null;
-
         //如果充值的交易已存在，则不再多余生成，复用充值交易
-        if (! $transCharge = Trans::find()->where(['trans_id_ext'=>$trans->id, 'trans_type_id'=>Trans::TRANS_TYPE_CHARGE])->one()) {
+        if (! $transCharge = Trans::findOne(['trans_id_ext'=>$trans->id, 'trans_type_id'=>Trans::TRANS_TYPE_CHARGE])) {
             $transCharge = new Trans();
         }
 
@@ -540,9 +525,12 @@ class Account extends BaseAccount
         $transCharge->total_money = $trans->total_money - $userAccount->balance;
 
         if (! $transCharge->save()) {
+            $this->addError(__METHOD__, '保存充值交易单时发生错误');
+            $this->addErrors($transCharge->getErrors());
             return false;
         }
  
+        //生成收款单，并返回
         return $this->generateReceivable($transCharge);
 
     }
@@ -562,6 +550,7 @@ class Account extends BaseAccount
         //获取交易记录
         $trans = Trans::findOne($transId);
         if (!$trans) {
+            $this->addError(__METHOD__, '对应的交易记录不存在');
             return false;
         }
 
@@ -573,7 +562,8 @@ class Account extends BaseAccount
 
         //为用户账户充值,充值成功即为一个事物，后续的购买判断在controller里面完成
         $userAccount = $this->getUserAccount($trans->from_uid);
-        if (!$userAccount->plus($trans->total_money, $trans, '用户账户充值')) {
+        if (!$this->plus($userAccount->uid, $trans->total_money, $trans->id, '用户账户充值')) {
+            $this->addError(__METHOD__, '为账户充值时发生错误');
             return false;
         }
 
