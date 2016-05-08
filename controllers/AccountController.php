@@ -163,6 +163,7 @@ class AccountController extends WebController
         //如果账户余额大于交易的总金额，则直接支付
         $callbackData = ['bid'=>$payForm->booking_id, 'trans_id'=>$trans->id];
         if ($userAccount->balance >= $trans->total_money) {
+            Yii::warning('用户帐户余额直接支付订单');
             if (Yii::$app->account->pay($trans)) {
                 //回调预订中的成功支付函数
                 if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
@@ -176,12 +177,15 @@ class AccountController extends WebController
                     return;
                 }
                 else {
+                    Yii::warning(__METHOD__ . '处理预订回掉时出现问题');
                     $transaction->rollback();
                     //此处需要设置错误信息
                     return ;
                 }
             }
             else {
+                Yii::warning(__METHOD__ . '用户付款时出错');
+                Yii::warning(Yii::$app->account->getErrors());
                 $transaction->rollback();
                 return;
             }
@@ -303,9 +307,28 @@ class AccountController extends WebController
 
         //判断订单是否支付成功, 如果成功则进入成功处理逻辑
         if ($payment->checkPayStatus() === false) {
-            throw new LBUserException('支付结果检查失败!', 1);
+            Yii::error('支付结果检查失败!');
+            $payment->replyFailureToServer();
             exit;
         }
+
+        $receivable = $payment->getReceivable();
+
+        if (! $receivable) {
+            Yii::error('找不到对应的收款单!');
+            $payment->replyFailureToServer();
+            exit;
+        }
+        else {
+
+            //如果收款单的付款成功事件已被处理，则直接返回服务器成功
+            if ($receivable->hasPaySucceeded()) {
+                Yii::info('收款单已处理!');
+                $payment->replySuccessToServer();
+                exit;
+            }
+        }
+
 
         //如果checkPayStatus返回成功，代表支付成功，此时进行实际的业务处理
         $transaction = Yii::$app->db->beginTransaction();
@@ -319,8 +342,13 @@ class AccountController extends WebController
         $trans = null;
         //业务逻辑处理，此处应当判断订单是否成功
         if ($transId = $payment->processNotify($handlers)) {
-            $trans = 
+            //充值交易完成，在commit之后，需要回告给服务器
             $transaction->commit();
+            $payment->replySuccessToServer();
+
+            $trans = Trans::findOne($transId);
+
+            Yii::info('交易id为:' . $transId, 'account-pay-notify');
             Yii::info('成功处理用户充值逻辑', 'account-pay-notify');
 
             //如果交易存在关联的交易，则查询关联交易的信息，并尝试支付相应的关联订单，需要提供订单的回调函数
@@ -332,7 +360,6 @@ class AccountController extends WebController
                 if (!$transOrder) {
                     $transaction->rollback();
                     Yii::warning('关联交易查询失败,并不存在该关联交易订单， 退出购买逻辑', 'account-pay-notify');
-                    throw new LBUserException('关联交易查询失败，退出购买逻辑', 2);
                     exit;
                 }
 
@@ -366,15 +393,19 @@ class AccountController extends WebController
                 }
                 else {
                     $transaction->rollback();
-                    throw new LBUserException('订单付款失败', 4, Yii::$app->account->getErrors());
+                    Yii::error('用户付款失败', 'account-pay-notify');
                     exit;
                 }
+            }
+            else {
+                Yii::info('交易没有关联订单:', 'account-pay-notify');
+                Yii::info($trans);
             }
         }
         else {
             $transaction->rollback();
             Yii::warning('处理支付成功失败...', 'account-pay-notify');
-            throw new LBUserException('订单付款失败', 4, $payment->getErrors());
+            $payment->replyFailureToServer();
             exit;
         }
         Yii::info('交易成功处理...', 'account-pay-notify');

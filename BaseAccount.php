@@ -2,10 +2,12 @@
 
 namespace lubaogui\account;
 
+use Yii;
 use yii\base\Component;
 use yii\helpers\ArrayHelper;
 use yii\base\Model;
 use lubaogui\account\models\UserAccount;
+use lubaogui\account\models\UserAccountLog;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
 use lubaogui\payment\Payment;
@@ -186,14 +188,14 @@ class BaseAccount extends Model
      **/
     protected function processFee($action, $trans) {
 
-        $profitAccount = UserAccount::getProfitAccount();
+        $feeAccount = UserAccount::getFeeAccount();
         switch ($action) {
         case 'pay': {
-            $this->plus($profitAccount->uid, $trans->fee, $trans->id, '手续费收入');
+            $this->plus($feeAccount->uid, $trans->fee, $trans->id, '手续费收入');
             break;
         }
         case 'refund': {
-            $this->minus($profitAccount->uid, $trans->fee, $trans->id, '手续费退款');
+            $this->minus($feeAccount->uid, $trans->fee, $trans->id, '手续费退款');
             break;
         }
         default:break;
@@ -210,7 +212,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function plus($uid, $money, $transId, $description, $currency = 1 ) {
-        $this->balance($uid, UserAccount::BALANCE_TYPE_PLUS, $money, $transId, $description, $currency);
+        return $this->balance($uid, UserAccount::BALANCE_TYPE_PLUS, $money, $transId, $description, $currency);
     }
 
     /**
@@ -222,7 +224,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function minus($uid, $money, $transId, $description, $currency = 1) {
-        $this->balance($uid, UserAccount::BALANCE_TYPE_MINUS, $money, $transId, $description, $currency);
+        return $this->balance($uid, UserAccount::BALANCE_TYPE_MINUS, $money, $transId, $description, $currency);
     }
 
     /**
@@ -338,8 +340,10 @@ class BaseAccount extends Model
         }
 
 
+        Yii::warning('获取用户帐户', __METHOD__);
         $userAccount = $this->getUserAccount($uid);
 
+        Yii::warning('判断账户变更类型', __METHOD__);
         switch ($balanceType) {
         case UserAccount::BALANCE_TYPE_PLUS : {
             $userAccount->plus($money);
@@ -362,13 +366,14 @@ class BaseAccount extends Model
             break;
         }
         default: {
-            $userAccount->addError('uid', '不支持提交的账户操作类型');
+            $this->addError(__METHOD__, '不支持提交的账户操作类型');
             return false;
         }
         }
 
         if ($userAccount->save()) {
             //记录账单
+            Yii::warning('产生用户账单', __METHOD__);
             $bill = new Bill();
             $bill->uid = $userAccount->uid;
             if (! $freezeCat) {
@@ -384,10 +389,11 @@ class BaseAccount extends Model
             $bill->currency = $currency;
             $bill->description = $description;
             if (! $bill->save()) {
-                $userAccount->addErrors($bill->getErrors());
+                $this->addErrors($bill->getErrors());
                 return false;
             }
 
+            Yii::warning('产生账户快照', __METHOD__);
             //账户快照产生
             $accountLog = new UserAccountLog();
             $accountLog->uid = $userAccount->uid;
@@ -406,11 +412,17 @@ class BaseAccount extends Model
             $accountLog->trans_money = $money;
             $accountLog->trans_desc = $description;
 
+            Yii::warning('保存账户信息', __METHOD__);
             if (! $accountLog->save()) {
-                $userAccount->addErrors($accountLog->getErrors());
+                //$this->addErrors($accountLog->getErrors());
+                Yii::warning('保存账户快照失败', __METHOD__);
+                Yii::warning($accountLog->getErrors(), __METHOD__);
                 return false;
             }
-            return true;
+            else {
+                Yii::warning('保存账户快照成功', __METHOD__);
+                return true;
+            }
 
         }    
         else {

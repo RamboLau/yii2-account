@@ -42,7 +42,6 @@ class Account extends BaseAccount
         //不论哪种交易模式，首先从用户账户扣款，扣款成功才有后续动作
         if (!$this->minus($buyerAccount->uid, $trans->total_money, $trans->id, '产品担保交易扣款')) {
             $this->addError(__METHOD__, '用户账户扣款失败');
-            $this->addErrors($buyerAccount->getErrors());
             return false;
         }
 
@@ -61,7 +60,7 @@ class Account extends BaseAccount
             break;
         }
         case Trans::PAY_MODE_VOUCHPAY: {
-            $vouchAccount = $this->getVouchAccount();
+            $vouchAccount = UserAccount::getVouchAccount();
             if (!$this->plus($vouchAccount->uid, $trans->total_money, $trans->id, '担保账号交易收款')) {
                 $this->addError(__METHOD__, '担保账号收款失败');
                 return false;
@@ -103,7 +102,7 @@ class Account extends BaseAccount
         }
 
         //金额从担保账号转出
-        $vouchAccount = $this->getVouchAccount();;
+        $vouchAccount = UserAccount::getVouchAccount();;
         if (!$this->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易账号转出完成购买')) {
             $this->addError(__METHOD__, '担保帐号转出失败');
             return false;
@@ -180,7 +179,7 @@ class Account extends BaseAccount
         switch ($trans->status) {
         case Trans::PAY_STATUS_SUCCEEDED : {
             //从担保账号中退款,由于交易没有达成，分润也没有做，直接退款即可
-            $vouchAccount = $this->getVouchAccount();
+            $vouchAccount = UserAccount::getVouchAccount();
             if (!$this->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易担保账号退款')) {
                 $this->addError(__METHOD__, '担保账号退款失败');
                 return false;
