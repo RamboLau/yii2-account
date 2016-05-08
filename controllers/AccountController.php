@@ -205,9 +205,9 @@ class AccountController extends WebController
         $payChannel = PayChannel::findOne($payForm->channel_id);
 
         //根据是否是移动端支付，决定传给payment的options参数
-        $payOptions['app_id'] = 'wechatpay-native';
+        $payOptions['trade_type'] = 'NATIVE';
         if ($payForm->is_mobile) {
-            $payOptions['app_id'] = 'wechatpay-app';
+            $payOptions['trade_type'] = 'APP';
         }
 
         //跳转到支付页面,如果是微信扫码支付，返回的是图片生成的url地址，如果是支付宝，返回的是html

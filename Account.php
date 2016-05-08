@@ -247,7 +247,7 @@ class Account extends BaseAccount
     }
 
     /**
-     * @brief 冻结资金,在提现申请的时候，会冻结资金,如果用户取消，会取消冻结资金
+     * @brief 冻结资金,在提现申请的时候，会冻结资金, 冻结操作失败，则提现申请无法继续
      *
      * @return  public function 
      * @retval   
@@ -256,38 +256,15 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2016/01/01 20:00:36
     **/
-    public function freeze($withdrawId) {
+    public function freezeForWithdraw($uid, $money, $withdrawId) {
         $withdraw = UserWithdraw::findOne($withdrawId);
         if (empty($withdraw)) {
             $this->addError('display-error', '提现申请记录不存在');
             return false;
         }
 
-        //产生freeze记录
-        $freeze = new Freeze();
-        $freeze->source_id = $withdrawId;
-        $freeze->uid = $withdraw->uid;
-        $freeze->type = Freeze::FREEZE_TYPE_WITHDRAW;
-        $freeze->status = Freeze::FREEZE_STATUS_FREEZING;
-        $freeze->currency = 1;
-        $freeze->money = $withdraw->money;
-        $freeze->description = '提现';
-        
-        if ($freeze->save()) {
-            $userAccount = $this->getUserAccount($withdraw->uid);
-            if ($userAccount->freeze($withdraw->money)) {
-                return true;
-            }
-            else {
-                $this->addError('display-error', '冻结用户金额失败');
-                return false;
-            }
-        }
-        else {
+        $this->freeze(
 
-            $this->addError('display-error', '冻结记录保存失败');
-            return false;
-        }
     }
 
     /**
@@ -300,7 +277,7 @@ class Account extends BaseAccount
      * @author 吕宝贵
      * @date 2016/01/01 21:51:16
     **/
-    public function unfreeze($withdrawId) {
+    public function unfreezeForWithdraw($withdrawId) {
         $withdraw = UserWithdraw::findOne($withdrawId);
         if (empty($withdraw)) {
             $this->addError('display-error', '提现申请记录不存在');

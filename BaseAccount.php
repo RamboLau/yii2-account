@@ -233,20 +233,20 @@ class BaseAccount extends Model
      * @author 吕宝贵
      * @date 2015/12/05 12:45:52
      **/
-    public function freeze($uid, $money, $transId, $description, $currency = 1) {
+    public function freeze($uid, $money, $type, $sourceId, $description, $currency = 1) {
         //产生冻结记录
         $freeze = new Freeze();
         $freeze->uid = $uid;
-        $freeze->type = Freeze::FREEZE_TYPE_WITHDRAW;
+        $freeze->type = $type;
         $freeze->money = $money;
         $freeze->currency = $currency;
-        $freeze->trans_id = $transId;
+        $freeze->source_id = $sourceId ? $sourceId : 0;
         $freeze->status = Freeze::FREEZE_STATUS_FREEZING;
         $freeze->description = $description;
 
         if ($freeze->save()) {
             //账户结算
-            return $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $transId, $description, $currency);
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $freeze->id, $description, $currency);
         }
         else {
             $this->addErrors($freeze->getErrors);
@@ -262,7 +262,7 @@ class BaseAccount extends Model
      * @author 吕宝贵
      * @date 2015/12/05 12:45:52
      **/
-    public function unFreeze($uid, $transId, $description, $currency) {
+    public function unFreeze($uid, $freezeId, $description, $currency) {
         //获取trans相对应的freeze记录,并解除冻结
         $freeze = Freeze::findOne(['uid'=>$uid, 'trans_id'=>$transId]);
         if (empty($freeze)) {
@@ -297,7 +297,7 @@ class BaseAccount extends Model
         }
 
         if ($freeze->finish()) {
-            return $this->balance($uid, UserAccount::BALANCE_TYPE_FREEZE, $money, $transId, $description, $currency);
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_FINISH_FREEZE, $money, $transId, $description, $currency);
         }
         else {
             $this->addErrors($freeze->getErrors());
@@ -317,16 +317,30 @@ class BaseAccount extends Model
      **/
     protected function balance($uid, $balanceType, $money, $transId, $description, $currency) {
 
-        //根据交易号查找对应的交易
-        $trans = Trans::findOne($transId);
-        if (! $trans) {
-            $this->addError('trans', '不存在该交易订单');
-            return false;
+        $freezeCat = false;
+        $freeze = null;
+        $trans = null;
+        if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE]) {
+            $freezeCat = true;
+            $freeze = Freeze::findOne($transId);
+            if (! $freeze) {
+                $this->addError('trans', '不存在该交易订单');
+                return false;
+            }
         }
+        else {
+            //根据交易号查找对应的交易
+            $trans = Trans::findOne($transId);
+            if (! $trans) {
+                $this->addError('trans', '不存在该交易订单');
+                return false;
+            }
+        }
+
 
         $userAccount = $this->getUserAccount($uid);
 
-        switch $balanceType {
+        switch ($balanceType) {
         case UserAccount::BALANCE_TYPE_PLUS : {
             $userAccount->plus($money);
             break;
@@ -347,7 +361,7 @@ class BaseAccount extends Model
             $userAccount->finishFreeze($money);
             break;
         }
-        default {
+        default: {
             $userAccount->addError('uid', '不支持提交的账户操作类型');
             return false;
         }
@@ -357,12 +371,17 @@ class BaseAccount extends Model
             //记录账单
             $bill = new Bill();
             $bill->uid = $userAccount->uid;
-            $bill->trans_id = $trans->id;
-            $bill->trans_type_id = $trans->trans_type_id;
-            $bill->trans_type_name = $trans->transType->name;
+            if (! $freezeCat) {
+                $bill->trans_id = $trans->id;
+                $bill->trans_type_id = $trans->trans_type_id;
+                $bill->trans_type_name = $trans->transType->name;
+            }
+            else {
+                $bill->trans_id = $freeze->id;
+            }
             $bill->money = $money;
             $bill->balance_type = $balanceType;
-            $bill->currency = $trans->currency;
+            $bill->currency = $currency;
             $bill->description = $description;
             if (! $bill->save()) {
                 $userAccount->addErrors($bill->getErrors());
@@ -373,8 +392,13 @@ class BaseAccount extends Model
             $accountLog = new UserAccountLog();
             $accountLog->uid = $userAccount->uid;
             $accountLog->account_type = $userAccount->type;
-            $accountLog->currency = $trans->currency;
-            $accountLog->trans_id = $trans->id;
+            $accountLog->currency = $currency;
+            if (! $freezeCat) {
+                $accountLog->trans_id = $trans->id;
+            }
+            else {
+                $accountLog->trans_id = $freeze->id;
+            }
             $accountLog->balance = $userAccount->balance;
             $accountLog->deposit = $userAccount->deposit;
             $accountLog->frozen_money = $userAccount->frozen_money;
