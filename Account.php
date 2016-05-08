@@ -263,8 +263,9 @@ class Account extends BaseAccount
             return false;
         }
 
-        $this->freeze(
-
+        if (! $this->freeze($uid, $money, $withdrawId, '用户提现冻结')) {
+            return false;
+        }
     }
 
     /**

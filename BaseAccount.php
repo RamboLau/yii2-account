@@ -320,7 +320,7 @@ class BaseAccount extends Model
         $freezeCat = false;
         $freeze = null;
         $trans = null;
-        if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE]) {
+        if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE])) {
             $freezeCat = true;
             $freeze = Freeze::findOne($transId);
             if (! $freeze) {

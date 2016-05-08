@@ -132,7 +132,7 @@ class UserAccount extends ActiveRecord
      * @date 2016/01/07 11:06:18
      **/
     public static function getProfitAccount() {
-        return self::getPayAccount(self::ACCOUNT_TYPE_SELFCOMPANY_PROFIT;
+        return self::getPayAccount(self::ACCOUNT_TYPE_SELFCOMPANY_PROFIT);
     }
 
     /**
