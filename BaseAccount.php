@@ -10,6 +10,7 @@ use lubaogui\account\models\UserAccount;
 use lubaogui\account\models\UserAccountLog;
 use lubaogui\account\models\Trans;
 use lubaogui\account\models\Bill;
+use lubaogui\account\models\Freeze;
 use lubaogui\payment\Payment;
 use lubaogui\account\behaviors\ErrorBehavior;;
 use yii\base\Exception;
@@ -354,6 +355,7 @@ class BaseAccount extends Model
             break;
         }
         case UserAccount::BALANCE_TYPE_FREEZE : {
+            Yii::warning('进入帐号冻结程序');
             $userAccount->freeze($money);
             break;
         }

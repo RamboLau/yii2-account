@@ -104,7 +104,7 @@ class Freeze extends ActiveRecord
     public function finishFreeze() {
 
         if ($this->status === self::FREEZE_STATUS_THAWED) {
-            $this->addError(__METHOD__, '操作无法完成，记录已经解冻';
+            $this->addError(__METHOD__, '操作无法完成，记录已经解冻');
             return false;
         }
         if ($this->status === self::FREEZE_STATUS_FINISHED) {

@@ -215,8 +215,8 @@ class UserAccount extends ActiveRecord
             $this->addError(__METHOD__, '余额不足，无法支持冻结操作');
             return false;
         }
-        $this->balance += $money;
-        $this->frozen_money -= $money;
+        $this->balance -= $money;
+        $this->frozen_money += $money;
         return true;
     }
 

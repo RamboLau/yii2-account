@@ -261,8 +261,12 @@ class Account extends BaseAccount
             $this->addError('display-error', '提现申请记录不存在');
             return false;
         }
+        $freezeType = Freeze::FREEZE_TYPE_WITHDRAW;
 
-        if (! $this->freeze($uid, $money, $withdrawId, '用户提现冻结')) {
+        if ($this->freeze($uid, $money, $freezeType, $withdrawId, '用户提现冻结')) {
+            return true;
+        }
+        else {
             return false;
         }
     }
