@@ -306,7 +306,6 @@ class AccountController extends WebController
         //回调的时候，appId根据返回的参数来确定
         $payment = new Payment($channels[$payChannelId]['alias']);
 
-
         //判断订单是否支付成功, 如果成功则进入成功处理逻辑
         if ($payment->checkPayStatus() === false) {
             Yii::error('支付结果检查失败!');
@@ -346,7 +345,6 @@ class AccountController extends WebController
         if ($transId = $payment->processNotify($handlers)) {
             //充值交易完成，在commit之后，需要回告给服务器
             $transaction->commit();
-            $payment->replySuccessToServer();
 
             $trans = Trans::findOne($transId);
 
@@ -410,6 +408,8 @@ class AccountController extends WebController
             $payment->replyFailureToServer();
             exit;
         }
+
+        $payment->replySuccessToServer();
         Yii::info('交易成功处理...', 'account-pay-notify');
     }
 
