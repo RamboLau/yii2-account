@@ -95,23 +95,34 @@ class BaseAccount extends Model
     protected function finishPayTrans($trans) {
 
         //收款账户处理逻辑
-        $sellerAccount = UserAccount::findOne($trans->to_uid);
-        if (!$sellerAccount->plus($trans->money, $trans, '产品售卖收入')) {
+        Yii::warning('进入卖家结算逻辑', __METHOD__);
+        $sellerAccount = $this->getUserAccount($trans->to_uid);
+        if (! $this->plus($sellerAccount->uid, $trans->money, $trans->id, '产品售卖收入')) {
+            Yii::warning('卖家结算失败', __METHOD__);
             return false;
         }
+        Yii::warning('卖家结算成功', __METHOD__);
 
         //分润账号处理逻辑
+        Yii::warning('进入平台利润结算', __METHOD__);
         if ($trans->profit > 0) {
             if (!$this->processProfit('pay', $trans)) {
+                Yii::warning('平台利润结算失败', __METHOD__);
                 $this->addError('display-error', '处理利润收入失败');
                 return false;
             }
         }
+        Yii::warning('平台利润结算成功', __METHOD__);
 
         //手续费逻辑处理
         if ($trans->fee > 0) {
-            return $this->processFee('pay', $trans);
+            if (! $this->processFee('pay', $trans)) {
+                Yii::warning('手续费结算失败', __METHOD__);
+                return false;
+            }
+            Yii::warning('手续费结算成功', __METHOD__);
         }
+        Yii::warning('结算成功', __METHOD__);
 
         return true;
 
@@ -175,6 +186,7 @@ class BaseAccount extends Model
             break;
         }
         default:break;
+        return false;
         }
         return false;
     }
@@ -213,6 +225,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function plus($uid, $money, $transId, $description, $currency = 1 ) {
+        Yii::warning($uid . ' income ' . $money, __METHOD__);
         return $this->balance($uid, UserAccount::BALANCE_TYPE_PLUS, $money, $transId, $description, $currency);
     }
 
@@ -323,6 +336,8 @@ class BaseAccount extends Model
         $freezeCat = false;
         $freeze = null;
         $trans = null;
+        Yii::warning('进入balance页面', __METHOD__);
+        Yii::warning('balanceType:' . $balanceType, __METHOD__);
         if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE])) {
             $freezeCat = true;
             $freeze = Freeze::findOne($transId);
@@ -355,7 +370,7 @@ class BaseAccount extends Model
             break;
         }
         case UserAccount::BALANCE_TYPE_FREEZE : {
-            Yii::warning('进入帐号冻结程序');
+            Yii::warning('进入帐号金额冻结');
             $userAccount->freeze($money);
             break;
         }

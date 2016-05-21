@@ -2,6 +2,7 @@
 
 namespace lubaogui\account;
 
+use Yii;
 use yii\helpers\ArrayHelper;
 use lubaogui\account\BaseAccount;
 use lubaogui\account\models\UserAccount;
@@ -95,31 +96,41 @@ class Account extends BaseAccount
      * @date 2015/11/30 16:22:19
      **/
     public function confirmVouchPay($transId) {
+        Yii::warning('进入担保交易结算环节', __METHOD__);
         $trans = Trans::findOne($transId);
         if ($trans->pay_mode != Trans::PAY_MODE_VOUCHPAY) {
+            Yii::warning('非担保交易模式不能走担保确认环节', __METHOD__);
             $this->addError(__METHOD__, '交易并非担保交易，此操作无效');
             return false;
         }
+        Yii::warning('成功获取交易信息', __METHOD__);
 
         //金额从担保账号转出
+        Yii::warning('开始从中间担保帐号扣款', __METHOD__);
         $vouchAccount = UserAccount::getVouchAccount();;
         if (!$this->minus($vouchAccount->uid, $trans->total_money, $trans->id, '担保交易账号转出完成购买')) {
             $this->addError(__METHOD__, '担保帐号转出失败');
+            Yii::warning('担保交易帐号扣款失败', __METHOD__);
             return false;
         }
+        Yii::warning('担保交易帐号扣款成功', __METHOD__);
 
         //完成交易的后续操作,是在扣款成功之后或者从担保账号中转出款项之后进行的操作
         if (!$this->finishPayTrans($trans)) {
             $this->addError(__METHOD__, '结算失败');
+            Yii::warning('交易结算失败', __METHOD__);
             return false;
         }
 
         //变更交易状态
         $trans->status = Trans::PAY_STATUS_FINISHED;
         if ($trans->save()) {
+            Yii::warning('交易信息保存成功', __METHOD__);
             return true;
         }
         else {
+            Yii::warning('交易信息保存成功', __METHOD__);
+            Yii::warning($trans->getErrors(), __METHOD__);
             $this->addError(__METHOD__, '保存交易信息失败');
             return false;
         }

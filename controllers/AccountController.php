@@ -228,6 +228,8 @@ class AccountController extends WebController
                 ];
         }
         else {
+            Yii::error($returnData);
+            Yii::error($payment->getErrors());
             throw new Exception('支付失败');
         }
 
