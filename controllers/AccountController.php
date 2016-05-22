@@ -138,6 +138,7 @@ class AccountController extends WebController
     **/
     public function actionPay()
     {
+        Yii::warning('进入支付Action', __METHOD__);
         $channels = PayChannel::find()->select(['id', 'name', 'alias'])->indexBy('id')->all();
         $payForm = new PayForm();
         $requestParams = array_merge(Yii::$app->request->get(), Yii::$app->request->post());
@@ -150,24 +151,29 @@ class AccountController extends WebController
                 ]);
         }
 
+        Yii::warning('获取payForm信息成功', __METHOD__);
         //根据form产生trans,trans处于未支付状态
         $transaction = Yii::$app->db->beginTransaction();
         $userAccount = Yii::$app->account->getUserAccount(Yii::$app->user->identity->uid);
+        Yii::warning('获取登录用户帐号的金额帐号', __METHOD__);
 
         $trans = null;
         if (! $trans = $payForm->getTrans()) {
             $transaction->rollback();
             throw new Exception(json_encode($payForm->getErrors()));
         }
+        Yii::warning('通过payForm成功获取相关交易信息', __METHOD__);
 
         //如果账户余额大于交易的总金额，则直接支付
         $callbackData = ['bid'=>$payForm->booking_id, 'trans_id'=>$trans->id];
         if ($userAccount->balance >= $trans->total_money) {
-            Yii::warning('用户帐户余额直接支付订单');
+            Yii::warning('用户余额充足，使用余额支付', __METHOD__);
             if (Yii::$app->account->pay($trans)) {
+                Yii::warning('使用余额支付成功', __METHOD__);
                 //回调预订中的成功支付函数
                 if (call_user_func([Booking::className(), 'processPaySuccess'], $callbackData)) {
                     $transaction->commit();
+                    Yii::warning('业务逻辑回掉处理成功', __METHOD__);
                     //支付成功
                     $this->data = [
                         'pay_url'=>'',
@@ -177,26 +183,30 @@ class AccountController extends WebController
                     return;
                 }
                 else {
-                    Yii::warning(__METHOD__ . '处理预订回掉时出现问题');
+                    Yii::warning('业务逻辑回掉处理失败', __METHOD__);
                     $transaction->rollback();
                     //此处需要设置错误信息
                     return ;
                 }
             }
             else {
-                Yii::warning(__METHOD__ . '用户付款时出错');
+                Yii::warning('使用余额支付失败，事务回滚', __METHOD__);
                 Yii::warning(Yii::$app->account->getErrors());
                 $transaction->rollback();
                 return;
             }
         }
 
+        Yii::warning('余额不足，尝试生成充值订单', __METHOD__);
         if (! $receivable = Yii::$app->account->generateReceivableAndChargeTrans($trans, $userAccount)) {
             $transaction->rollback();
+            Yii::warning('生成充值订单出错', __METHOD__);
             throw new Exception('生成充值订单出错');
         }
         else {
+            Yii::warning('生成充值订单成功', __METHOD__);
             if (call_user_func([Booking::className(), 'processGenTransSuccess'], $callbackData)) {
+                Yii::warning('挂在充值订单到业务订单交易信息上', __METHOD__);
                 $transaction->commit();
             }
             else {
@@ -205,6 +215,7 @@ class AccountController extends WebController
             }
         }
 
+        Yii::warning('根据充值订单信息产生第三方充值信息', __METHOD__);
         //下面的操作将会引起用户端页面的跳转或者是微信支付页面弹出
         $payChannel = PayChannel::findOne($payForm->channel_id);
 
@@ -219,13 +230,17 @@ class AccountController extends WebController
 
         //跳转到支付或者返回支付二维码地址
         $returnData = $payment->generatePayRequestParams($receivable);
+        Yii::warning('产生的充值订单信息为:', __METHOD__);
+        Yii::warning($returnData , __METHOD__);
 
         if ($returnData) {
             $this->data = [
                 'pay_url'=>$returnData,
                 'need_pay'=>1,
                 'channel_id'=>$payForm->channel_id,
-                ];
+            ];
+            Yii::warning($this->data , __METHOD__);
+            return;
         }
         else {
             Yii::error($returnData);
@@ -249,10 +264,7 @@ class AccountController extends WebController
         //支付方式通过支付的时候设置notify_url的channel_id参数来进行分辨
         //此方法不妥，换为使用其他方法来判断支付channel_id
         $payChannelId = 1;
-        if ($this->processPayNotify($payChannelId)) {
-            echo 'success';
-            exit;
-        }
+        $this->processPayNotify($payChannelId);
     }
 
     /**
@@ -409,8 +421,9 @@ class AccountController extends WebController
             exit;
         }
 
-        $payment->replySuccessToServer();
         Yii::info('交易成功处理...', 'account-pay-notify');
+        $payment->replySuccessToServer();
+        exit;
     }
 
 }
