@@ -338,7 +338,7 @@ class BaseAccount extends Model
         $freeze = null;
         $trans = null;
         Yii::warning('进入balance页面', __METHOD__);
-        Yii::warning('balanceType:' . $balanceType, __METHOD__);
+        Yii::warning('uid and balanceType:' . $uid . '---' . $balanceType, __METHOD__);
         if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE])) {
             $freezeCat = true;
             $freeze = Freeze::findOne($transId);
