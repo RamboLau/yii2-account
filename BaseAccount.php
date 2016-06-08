@@ -238,6 +238,7 @@ class BaseAccount extends Model
      * @date 2015/12/05 12:45:52
      **/
     public function minus($uid, $money, $transId, $description, $currency = 1) {
+        Yii::warning($uid . ' outcome ' . $money, __METHOD__);
         return $this->balance($uid, UserAccount::BALANCE_TYPE_MINUS, $money, $transId, $description, $currency);
     }
 
