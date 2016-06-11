@@ -171,7 +171,7 @@ class Account extends BaseAccount
         }
 
         //退款金额大小判断:退款金额需要大于0，同时退款金额不能超过交易总金额
-        if ($refundMoney > 0) {
+        if ($refundMoney >= 0) {
             if ($refundMoney > $trans->total_money) {
                 $this->addError(__METHOD__, '退款金额不能大于交易总金额');
                 return false;
