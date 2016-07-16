@@ -313,7 +313,7 @@ class BaseAccount extends Model
             return false;
         }
 
-        if ($freeze->finish()) {
+        if ($freeze->finishFreeze()) {
             return $this->balance($uid, UserAccount::BALANCE_TYPE_FINISH_FREEZE, $money, $transId, $description, $currency);
         }
         else {
