@@ -447,6 +447,7 @@ class Account extends BaseAccount
         }
 
         //用户设定的回调操作
+        $withdrawId = $trans->trans_id_ext;
         $callbackData['id'] = $withdrawId ;
         if (call_user_func($paySuccessCallback, $callbackData)) {
             return true;

@@ -287,9 +287,9 @@ class BaseAccount extends Model
             return false;
         }
 
-        //如果冻结操作成功，则对账户进行操作
+        //如果解除冻结操作成功，则对账户进行操作
         if ($freeze->unFreeze()) {
-            return $this->balance($uid, $freeze->money, $transId, $description, $currency);
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_UNFREEZE, $freeze->money, $freeze->id, $description, $currency);
         }
         else {
             $this->addErrors($freeze->getErrors());
@@ -314,7 +314,7 @@ class BaseAccount extends Model
         }
 
         if ($freeze->finishFreeze()) {
-            return $this->balance($uid, UserAccount::BALANCE_TYPE_FINISH_FREEZE, $money, $transId, $description, $currency);
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_FINISH_FREEZE, $freeze->money, $transId, '完成冻结', $freeze->currency);
         }
         else {
             $this->addErrors($freeze->getErrors());
@@ -341,7 +341,7 @@ class BaseAccount extends Model
         Yii::warning('uid and balanceType:' . $uid . '---' . $balanceType, __METHOD__);
         if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE])) {
             $freezeCat = true;
-            $freeze = Freeze::findOne($transId);
+            $freeze = Freeze::findOne(['trans_id'=>$transId]);
             if (! $freeze) {
                 $this->addError('trans', '不存在该交易订单');
                 return false;
