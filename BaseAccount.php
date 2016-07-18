@@ -314,7 +314,7 @@ class BaseAccount extends Model
         }
 
         if ($freeze->finishFreeze()) {
-            return $this->balance($uid, UserAccount::BALANCE_TYPE_FINISH_FREEZE, $freeze->money, $transId, '完成冻结', $freeze->currency);
+            return $this->balance($uid, UserAccount::BALANCE_TYPE_FINISH_FREEZE, $freeze->money, $freeze->id, '完成冻结', $freeze->currency);
         }
         else {
             $this->addErrors($freeze->getErrors());
@@ -341,7 +341,7 @@ class BaseAccount extends Model
         Yii::warning('uid and balanceType:' . $uid . '---' . $balanceType, __METHOD__);
         if (in_array($balanceType, [UserAccount::BALANCE_TYPE_FREEZE, UserAccount::BALANCE_TYPE_UNFREEZE, UserAccount::BALANCE_TYPE_FINISH_FREEZE])) {
             $freezeCat = true;
-            $freeze = Freeze::findOne(['trans_id'=>$transId]);
+            $freeze = Freeze::findOne($transId);
             if (! $freeze) {
                 $this->addError('trans', '不存在该交易订单');
                 return false;
